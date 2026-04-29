@@ -1,0 +1,13 @@
+.build/
+.swiftpm/
+DerivedData/
+*.xcuserstate
+.tmp*/
+.DS_Store
+dist/
+
+# Local agent/project working notes
+findings.md
+progress.md
+task_plan.md
+macos-clipboard-apps-report.md
