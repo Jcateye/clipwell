@@ -37,6 +37,8 @@ final class VocabularyStore {
     }
 
     private func persist(_ items: [VocabularyItem]) throws {
+        let directory = fileURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let data = try encoder.encode(items)
         try data.write(to: fileURL, options: [.atomic])
     }
