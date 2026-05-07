@@ -19,8 +19,8 @@ final class ClipRepository {
 
     func insert(_ clip: ClipItem) throws {
         let sql = """
-        INSERT INTO clips (id, created_at, type, plain_text, payload_path, source_app, is_pinned, content_hash)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO clips (id, created_at, type, plain_text, payload_path, source_app, is_pinned, content_hash, origin, derived_from_clip_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         try execute(sql) { statement in
             sqlite3_bind_text(statement, 1, clip.id, -1, SQLITE_TRANSIENT)
@@ -31,6 +31,8 @@ final class ClipRepository {
             bindOptionalText(statement, 6, clip.sourceApp)
             sqlite3_bind_int(statement, 7, clip.isPinned ? 1 : 0)
             sqlite3_bind_text(statement, 8, clip.contentHash, -1, SQLITE_TRANSIENT)
+            sqlite3_bind_text(statement, 9, clip.origin.rawValue, -1, SQLITE_TRANSIENT)
+            bindOptionalText(statement, 10, clip.derivedFromClipID)
         }
     }
 
@@ -49,7 +51,7 @@ final class ClipRepository {
 
         let whereClause = clauses.isEmpty ? "" : "WHERE " + clauses.joined(separator: " AND ")
         let sql = """
-        SELECT id, created_at, type, plain_text, payload_path, source_app, is_pinned, content_hash
+        SELECT id, created_at, type, plain_text, payload_path, source_app, is_pinned, content_hash, origin, derived_from_clip_id
         FROM clips
         \(whereClause)
         ORDER BY is_pinned DESC, created_at DESC
@@ -166,12 +168,16 @@ final class ClipRepository {
                 payload_path TEXT,
                 source_app TEXT,
                 is_pinned INTEGER DEFAULT 0,
-                content_hash TEXT
+                content_hash TEXT,
+                origin TEXT NOT NULL DEFAULT 'original',
+                derived_from_clip_id TEXT
             )
             """,
             "CREATE INDEX IF NOT EXISTS idx_clips_created_at ON clips(created_at)",
             "CREATE INDEX IF NOT EXISTS idx_clips_type ON clips(type)",
             "CREATE INDEX IF NOT EXISTS idx_clips_plain_text ON clips(plain_text)",
+            "ALTER TABLE clips ADD COLUMN origin TEXT NOT NULL DEFAULT 'original'",
+            "ALTER TABLE clips ADD COLUMN derived_from_clip_id TEXT",
             "UPDATE clips SET type = 'media' WHERE type = 'image'",
             """
             UPDATE clips
@@ -218,6 +224,8 @@ final class ClipRepository {
             return nil
         }
 
+        let origin = optionalColumn(statement, 8).flatMap(ClipOrigin.init(rawValue:)) ?? .original
+
         return ClipItem(
             id: String(cString: idPointer),
             createdAt: Date(timeIntervalSince1970: sqlite3_column_double(statement, 1)),
@@ -226,7 +234,9 @@ final class ClipRepository {
             payloadPath: optionalColumn(statement, 4),
             sourceApp: optionalColumn(statement, 5),
             isPinned: sqlite3_column_int(statement, 6) == 1,
-            contentHash: String(cString: hashPointer)
+            contentHash: String(cString: hashPointer),
+            origin: origin,
+            derivedFromClipID: optionalColumn(statement, 9)
         )
     }
 

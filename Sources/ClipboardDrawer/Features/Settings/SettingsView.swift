@@ -2,21 +2,26 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var settings: SettingsStore
+    @ObservedObject var aiConnectionValidator: AIConnectionValidator
     let conflictService: ShortcutConflictService
-    let saveShortcut: @MainActor (AppShortcut) -> Bool
+    let saveShortcut: @MainActor (AppAction, AppShortcut) -> Bool
+    let openVocabulary: () -> Void
 
     @State private var selectedTab: SettingsTab = .general
-    @State private var recording = false
+    @State private var recordingAction: AppAction?
     @State private var pendingShortcut: AppShortcut
     @State private var conflictMessage: String?
     @State private var warningMessage: String?
     @State private var registrationMessage: String?
     @State private var launchAtLoginMessage: String?
+    @State private var pendingActionForWarning: AppAction?
 
-    init(settings: SettingsStore, conflictService: ShortcutConflictService, saveShortcut: @MainActor @escaping (AppShortcut) -> Bool) {
+    init(settings: SettingsStore, conflictService: ShortcutConflictService, saveShortcut: @MainActor @escaping (AppAction, AppShortcut) -> Bool, aiConnectionValidator: AIConnectionValidator, openVocabulary: @escaping () -> Void) {
         self.settings = settings
         self.conflictService = conflictService
         self.saveShortcut = saveShortcut
+        self.aiConnectionValidator = aiConnectionValidator
+        self.openVocabulary = openVocabulary
         _pendingShortcut = State(initialValue: settings.toggleDrawerShortcut)
     }
 
@@ -217,29 +222,28 @@ struct SettingsView: View {
     }
 
     private var shortcutSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                labelBlock("Toggle shortcut", "Global trigger for the drawer")
-                Spacer()
-                Text(settings.toggleDrawerShortcut.displayString)
-                    .font(.system(.body, design: .monospaced).weight(.bold))
-                    .foregroundStyle(TechTheme.cyan)
-                Button(recording ? "Listening…" : "Set Shortcut") {
-                    recording = true
-                    pendingShortcut = settings.toggleDrawerShortcut
-                    conflictMessage = nil
-                    warningMessage = nil
-                    registrationMessage = nil
-                }
-                .buttonStyle(TechSecondaryButtonStyle())
-            }
+        VStack(alignment: .leading, spacing: 12) {
+            shortcutRow(
+                action: .toggleDrawer,
+                title: "Toggle shortcut",
+                subtitle: "Global trigger for the drawer",
+                current: settings.toggleDrawerShortcut
+            )
 
-            if recording {
+            shortcutRow(
+                action: .screenshotOCR,
+                title: "Screenshot OCR shortcut",
+                subtitle: "Global trigger for interactive screenshot text capture",
+                current: settings.screenshotOCRShortcut
+            )
+
+            if let action = recordingAction {
                 ShortcutRecorderView(shortcut: $pendingShortcut) {
-                    recording = false
+                    recordingAction = nil
                 } onRecord: { shortcut in
-                    recording = false
-                    validateAndMaybeSave(shortcut, allowReserved: false)
+                    let targetAction = action
+                    recordingAction = nil
+                    validateAndMaybeSave(shortcut, for: targetAction, allowReserved: false)
                 }
                 .frame(height: 44)
                 .overlay {
@@ -253,11 +257,11 @@ struct SettingsView: View {
             if let conflictMessage {
                 statusText(conflictMessage, color: .red)
             }
-            if let warningMessage {
+            if let warningMessage, let action = recordingAction ?? pendingActionForWarning {
                 HStack {
                     statusText(warningMessage, color: TechTheme.amber)
                     Button("Save anyway") {
-                        validateAndMaybeSave(pendingShortcut, allowReserved: true)
+                        validateAndMaybeSave(pendingShortcut, for: action, allowReserved: true)
                     }
                     .buttonStyle(TechSecondaryButtonStyle())
                 }
@@ -302,6 +306,133 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 8) {
                 labelBlock("Ignored file suffixes", "Comma, space, or line separated; examples: mov, zip, psd")
                 TextEditor(text: $settings.ignoredFileExtensionsText)
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(TechTheme.text)
+                    .frame(height: 58)
+                    .scrollContentBackground(.hidden)
+                    .background(TechTheme.background.opacity(0.45))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(TechTheme.line.opacity(0.8), lineWidth: 0.8)
+                    }
+            }
+
+            Divider()
+                .overlay(TechTheme.line)
+
+            settingsRow(
+                title: "Pro OCR",
+                subtitle: "Enable local image OCR and screenshot OCR actions.",
+                trailing: AnyView(
+                    Toggle("", isOn: $settings.proEnabled)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                )
+            )
+
+            settingsRow(
+                title: "Vocabulary",
+                subtitle: "Enable local add-to-vocabulary action for text clips.",
+                trailing: AnyView(
+                    HStack(spacing: 10) {
+                        Button("Open") {
+                            openVocabulary()
+                        }
+                        .buttonStyle(TechSecondaryButtonStyle())
+
+                        Toggle("", isOn: $settings.proVocabularyEnabled)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                    }
+                )
+            )
+
+            settingsRow(
+                title: "Pro AI",
+                subtitle: "Enable AI translate, rewrite, and summarize actions for text clips.",
+                trailing: AnyView(
+                    Toggle("", isOn: $settings.proAIEnabled)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                )
+            )
+
+            VStack(alignment: .leading, spacing: 8) {
+                labelBlock("Translation target", "Language name for the Translate action, for example: English, Chinese, Japanese")
+                TextField("English", text: $settings.proTranslationTargetLanguage)
+                    .textFieldStyle(.plain)
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(TechTheme.text)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(TechTheme.background.opacity(0.45), in: RoundedRectangle(cornerRadius: 12))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(TechTheme.line.opacity(0.8), lineWidth: 0.8)
+                    }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                labelBlock("AI base URL", "OpenAI-compatible endpoint; recommended local LiteLLM URL")
+                TextField("http://127.0.0.1:4000/v1", text: $settings.proAIBaseURL)
+                    .textFieldStyle(.plain)
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(TechTheme.text)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(TechTheme.background.opacity(0.45), in: RoundedRectangle(cornerRadius: 12))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(TechTheme.line.opacity(0.8), lineWidth: 0.8)
+                    }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                labelBlock("AI model", "LiteLLM short name or any OpenAI-compatible model id")
+                TextField("gpt-5.4-mini", text: $settings.proAIModel)
+                    .textFieldStyle(.plain)
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(TechTheme.text)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(TechTheme.background.opacity(0.45), in: RoundedRectangle(cornerRadius: 12))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(TechTheme.line.opacity(0.8), lineWidth: 0.8)
+                    }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                labelBlock("AI API key", "LiteLLM virtual key or local master key; leave empty only if your endpoint allows it")
+                SecureField("sk-...", text: $settings.proAIAPIKey)
+                    .textFieldStyle(.plain)
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(TechTheme.text)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(TechTheme.background.opacity(0.45), in: RoundedRectangle(cornerRadius: 12))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(TechTheme.line.opacity(0.8), lineWidth: 0.8)
+                    }
+            }
+
+            HStack(spacing: 10) {
+                Button(aiConnectionValidator.isTesting ? "Testing…" : "Test AI Connection") {
+                    aiConnectionValidator.testConnection()
+                }
+                .buttonStyle(TechSecondaryButtonStyle())
+                .disabled(aiConnectionValidator.isTesting)
+
+                if let statusMessage = aiConnectionValidator.statusMessage {
+                    statusText(statusMessage, color: statusMessage.contains("OK") ? TechTheme.green : TechTheme.amber)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                labelBlock("OCR languages", "Comma separated Vision language codes; example: zh-Hans, en-US")
+                TextEditor(text: $settings.proOCRLanguagesText)
                     .font(.system(.body, design: .monospaced))
                     .foregroundStyle(TechTheme.text)
                     .frame(height: 58)
@@ -360,9 +491,29 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func validateAndMaybeSave(_ shortcut: AppShortcut, allowReserved: Bool) {
-        let result = conflictService.validate(shortcut: shortcut, for: .toggleDrawer, existing: settings.shortcutsByAction())
+    private func shortcutRow(action: AppAction, title: String, subtitle: String, current: AppShortcut) -> some View {
+        HStack {
+            labelBlock(title, subtitle)
+            Spacer()
+            Text(current.displayString)
+                .font(.system(.body, design: .monospaced).weight(.bold))
+                .foregroundStyle(TechTheme.cyan)
+            Button(recordingAction == action ? "Listening…" : "Set Shortcut") {
+                recordingAction = action
+                pendingActionForWarning = nil
+                pendingShortcut = current
+                conflictMessage = nil
+                warningMessage = nil
+                registrationMessage = nil
+            }
+            .buttonStyle(TechSecondaryButtonStyle())
+        }
+    }
+
+    private func validateAndMaybeSave(_ shortcut: AppShortcut, for action: AppAction, allowReserved: Bool) {
+        let result = conflictService.validate(shortcut: shortcut, for: action, existing: settings.shortcutsByAction())
         if result.isHardConflict {
+            pendingActionForWarning = nil
             conflictMessage = result.message
             warningMessage = nil
             return
@@ -370,18 +521,29 @@ struct SettingsView: View {
 
         if let warning = result.warning, !allowReserved {
             pendingShortcut = shortcut
+            pendingActionForWarning = action
             warningMessage = warning
             conflictMessage = nil
             return
         }
 
-        if saveShortcut(shortcut) {
-            settings.toggleDrawerShortcut = shortcut
+        if saveShortcut(action, shortcut) {
+            switch action {
+            case .toggleDrawer:
+                settings.toggleDrawerShortcut = shortcut
+            case .screenshotOCR:
+                settings.screenshotOCRShortcut = shortcut
+            }
+            pendingActionForWarning = nil
+            settings.objectWillChange.send()
             conflictMessage = nil
             warningMessage = nil
             registrationMessage = nil
         } else {
-            registrationMessage = "Registration failed; kept \(settings.toggleDrawerShortcut.displayString)."
+            pendingActionForWarning = nil
+            warningMessage = nil
+            let kept = settings.shortcutsByAction()[action]?.displayString ?? shortcut.displayString
+            registrationMessage = "Registration failed; kept \(kept)."
         }
     }
 }

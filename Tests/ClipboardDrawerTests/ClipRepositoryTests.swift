@@ -16,7 +16,9 @@ final class ClipRepositoryTests: XCTestCase {
             payloadPath: directory.appendingPathComponent("old.png").path,
             sourceApp: "Tests",
             isPinned: false,
-            contentHash: "old-hash"
+            contentHash: "old-hash",
+            origin: .original,
+            derivedFromClipID: nil
         )
         let new = ClipItem(
             id: "new",
@@ -26,7 +28,9 @@ final class ClipRepositoryTests: XCTestCase {
             payloadPath: nil,
             sourceApp: "Tests",
             isPinned: false,
-            contentHash: "new-hash"
+            contentHash: "new-hash",
+            origin: .original,
+            derivedFromClipID: nil
         )
 
         try repository.insert(old)
@@ -53,7 +57,9 @@ final class ClipRepositoryTests: XCTestCase {
             payloadPath: directory.appendingPathComponent("payload.png").path,
             sourceApp: "Tests",
             isPinned: false,
-            contentHash: "payload-hash"
+            contentHash: "payload-hash",
+            origin: .original,
+            derivedFromClipID: nil
         )
         let mediaFileClip = ClipItem(
             id: "media-file",
@@ -63,7 +69,9 @@ final class ClipRepositoryTests: XCTestCase {
             payloadPath: nil,
             sourceApp: "Tests",
             isPinned: false,
-            contentHash: "file-hash"
+            contentHash: "file-hash",
+            origin: .original,
+            derivedFromClipID: nil
         )
         let documentClip = ClipItem(
             id: "document",
@@ -73,7 +81,9 @@ final class ClipRepositoryTests: XCTestCase {
             payloadPath: nil,
             sourceApp: "Tests",
             isPinned: false,
-            contentHash: "document-hash"
+            contentHash: "document-hash",
+            origin: .original,
+            derivedFromClipID: nil
         )
 
         try repository.insert(mediaPayloadClip)
@@ -98,7 +108,9 @@ final class ClipRepositoryTests: XCTestCase {
             payloadPath: nil,
             sourceApp: "Tests",
             isPinned: false,
-            contentHash: "text-hash"
+            contentHash: "text-hash",
+            origin: .original,
+            derivedFromClipID: nil
         )
         let mediaClip = ClipItem(
             id: "media",
@@ -108,7 +120,9 @@ final class ClipRepositoryTests: XCTestCase {
             payloadPath: directory.appendingPathComponent("image.png").path,
             sourceApp: "Tests",
             isPinned: false,
-            contentHash: "media-hash"
+            contentHash: "media-hash",
+            origin: .original,
+            derivedFromClipID: nil
         )
         let documentClip = ClipItem(
             id: "document",
@@ -118,7 +132,9 @@ final class ClipRepositoryTests: XCTestCase {
             payloadPath: nil,
             sourceApp: "Tests",
             isPinned: false,
-            contentHash: "document-hash"
+            contentHash: "document-hash",
+            origin: .original,
+            derivedFromClipID: nil
         )
 
         try repository.insert(textClip)

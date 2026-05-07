@@ -2,14 +2,40 @@ import AppKit
 import Combine
 import Foundation
 
+enum ProBusyKind: String {
+    case imageOCR
+    case screenshotOCR
+    case addToVocabulary
+    case aiTranslate
+    case aiRewrite
+    case aiSummarize
+
+    var statusText: String {
+        switch self {
+        case .imageOCR: return "Running image OCR..."
+        case .screenshotOCR: return "Running screenshot OCR..."
+        case .addToVocabulary: return "Saving to vocabulary..."
+        case .aiTranslate: return "Translating text with AI..."
+        case .aiRewrite: return "Rewriting text with AI..."
+        case .aiSummarize: return "Summarizing text with AI..."
+        }
+    }
+}
+
 @MainActor
 final class ClipboardMonitorService: ObservableObject {
     @Published private(set) var clips: [ClipItem] = []
     @Published var searchText: String = "" { didSet { refresh() } }
     @Published var filter: ClipFilter = .all { didSet { refresh() } }
     @Published var bannerMessage: String?
+    @Published var proResultTitle: String?
+    @Published var proResultText: String?
+    @Published var proBusyState: ProBusyKind?
 
     private let settings: SettingsStore
+    private let proActionEngine: ProActionEngine
+    private let proFeatureGate: ProFeatureGate
+    private let vocabularyStore: VocabularyStore
     private let repository: ClipRepository
     private let payloadStore: PayloadStore
     private let parser: ClipboardParser
@@ -22,12 +48,25 @@ final class ClipboardMonitorService: ObservableObject {
         settings: SettingsStore,
         repository: ClipRepository = ClipRepository(),
         payloadStore: PayloadStore = PayloadStore(),
-        parser: ClipboardParser = ClipboardParser()
+        parser: ClipboardParser = ClipboardParser(),
+        vocabularyStore: VocabularyStore = VocabularyStore()
     ) {
         self.settings = settings
         self.repository = repository
         self.payloadStore = payloadStore
         self.parser = parser
+        self.vocabularyStore = vocabularyStore
+        let aiConfigStore = AIProviderConfigStore(settings: settings)
+        let textAIService = OpenAICompatibleTextAIService(configStore: aiConfigStore)
+        self.proActionEngine = ProActionEngine(actions: [
+            ImageOCRAction(ocrService: OCRService(), settings: settings),
+            ScreenshotOCRAction(screenshotService: ScreenshotService(), ocrService: OCRService(), settings: settings),
+            AddToVocabularyAction(store: vocabularyStore),
+            TranslateTextAction(service: textAIService, settings: settings),
+            RewriteTextAction(service: textAIService),
+            SummarizeTextAction(service: textAIService),
+        ])
+        self.proFeatureGate = ProFeatureGate(settings: settings)
         self.lastChangeCount = NSPasteboard.general.changeCount
         self.lastCapturedHash = repository.latestClip()?.contentHash
 
@@ -82,6 +121,212 @@ final class ClipboardMonitorService: ObservableObject {
         lastCapturedHash = repository.latestClip()?.contentHash
         refresh()
         bannerMessage = "Cleared \(filter.displayName.lowercased()) clips."
+    }
+
+    func runImageOCR(for clip: ClipItem) async {
+        guard proBusyState == nil else { return }
+        proBusyState = .imageOCR
+        bannerMessage = ProBusyKind.imageOCR.statusText
+        defer { proBusyState = nil }
+
+        do {
+            try proFeatureGate.require(.imageOCR)
+            guard clip.type == .media,
+                  clip.documentURL == nil,
+                  let imageData = payloadStore.read(path: clip.payloadPath) else {
+                bannerMessage = "Select an image clip to run OCR."
+                return
+            }
+
+            let result = try await proActionEngine.run([
+                .imageOCR
+            ], context: ProActionContext(
+                trigger: .manual,
+                clipboardItem: clip,
+                inputText: clip.plainText,
+                inputImageData: imageData,
+                sourceAppName: clip.sourceApp,
+                userPrompt: nil
+            ))
+
+            handleProActionResult(result, title: "Image OCR ready", emptyMessage: "No text found in image.")
+        } catch ProFeatureError.locked {
+            bannerMessage = "Pro OCR is locked."
+        } catch {
+            bannerMessage = "Image OCR failed: \(error.localizedDescription)"
+        }
+    }
+
+    func addToVocabulary(for clip: ClipItem) async {
+        guard proBusyState == nil else { return }
+        proBusyState = .addToVocabulary
+        bannerMessage = ProBusyKind.addToVocabulary.statusText
+        defer { proBusyState = nil }
+
+        do {
+            try proFeatureGate.require(.vocabulary)
+            guard settings.proVocabularyEnabled else {
+                bannerMessage = "Vocabulary is disabled in settings."
+                return
+            }
+            guard let text = clip.plainText?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
+                bannerMessage = "Select a text clip to add to vocabulary."
+                return
+            }
+
+            let result = try await proActionEngine.run([
+                .addToVocabulary
+            ], context: ProActionContext(
+                trigger: .manual,
+                clipboardItem: clip,
+                inputText: text,
+                inputImageData: nil,
+                sourceAppName: clip.sourceApp,
+                userPrompt: nil
+            ))
+
+            let outcome = result.metadata["result"]
+            if outcome == "duplicate" {
+                bannerMessage = "Already in vocabulary."
+            } else {
+                bannerMessage = "Added to vocabulary."
+            }
+        } catch ProFeatureError.locked {
+            bannerMessage = "Pro vocabulary is locked."
+        } catch {
+            bannerMessage = "Add to vocabulary failed: \(error.localizedDescription)"
+        }
+    }
+
+    func runAITranslate(for clip: ClipItem) async {
+        guard proBusyState == nil else { return }
+        proBusyState = .aiTranslate
+        bannerMessage = ProBusyKind.aiTranslate.statusText
+        defer { proBusyState = nil }
+
+        do {
+            try proFeatureGate.require(.aiTranslate)
+            guard let text = clip.plainText?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
+                bannerMessage = "Select a text clip to translate."
+                return
+            }
+
+            let result = try await proActionEngine.run([
+                .translateText
+            ], context: ProActionContext(
+                trigger: .manual,
+                clipboardItem: clip,
+                inputText: text,
+                inputImageData: nil,
+                sourceAppName: clip.sourceApp,
+                userPrompt: nil
+            ))
+
+            handleProActionResult(result, title: "AI Translate ready", emptyMessage: "No translated text returned.")
+        } catch ProFeatureError.locked {
+            bannerMessage = "Pro AI Translate is locked."
+        } catch {
+            proResultTitle = nil
+            proResultText = nil
+            bannerMessage = "AI Translate failed: \(error.localizedDescription)"
+        }
+    }
+
+    func runAIRewrite(for clip: ClipItem) async {
+        guard proBusyState == nil else { return }
+        proBusyState = .aiRewrite
+        bannerMessage = ProBusyKind.aiRewrite.statusText
+        defer { proBusyState = nil }
+
+        do {
+            try proFeatureGate.require(.aiRewrite)
+            guard let text = clip.plainText?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
+                bannerMessage = "Select a text clip to rewrite."
+                return
+            }
+
+            let result = try await proActionEngine.run([
+                .rewriteText
+            ], context: ProActionContext(
+                trigger: .manual,
+                clipboardItem: clip,
+                inputText: text,
+                inputImageData: nil,
+                sourceAppName: clip.sourceApp,
+                userPrompt: nil
+            ))
+
+            handleProActionResult(result, title: "AI Rewrite ready", emptyMessage: "No rewritten text returned.")
+        } catch ProFeatureError.locked {
+            bannerMessage = "Pro AI Rewrite is locked."
+        } catch {
+            proResultTitle = nil
+            proResultText = nil
+            bannerMessage = "AI Rewrite failed: \(error.localizedDescription)"
+        }
+    }
+
+    func runAISummary(for clip: ClipItem) async {
+        guard proBusyState == nil else { return }
+        proBusyState = .aiSummarize
+        bannerMessage = ProBusyKind.aiSummarize.statusText
+        defer { proBusyState = nil }
+
+        do {
+            try proFeatureGate.require(.aiSummarize)
+            guard let text = clip.plainText?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
+                bannerMessage = "Select a text clip to summarize."
+                return
+            }
+
+            let result = try await proActionEngine.run([
+                .summarizeText
+            ], context: ProActionContext(
+                trigger: .manual,
+                clipboardItem: clip,
+                inputText: text,
+                inputImageData: nil,
+                sourceAppName: clip.sourceApp,
+                userPrompt: nil
+            ))
+
+            handleProActionResult(result, title: "AI Summary ready", emptyMessage: "No summary text returned.")
+        } catch ProFeatureError.locked {
+            bannerMessage = "Pro AI Summary is locked."
+        } catch {
+            proResultTitle = nil
+            proResultText = nil
+            bannerMessage = "AI Summary failed: \(error.localizedDescription)"
+        }
+    }
+
+    func runScreenshotOCR() async {
+        guard proBusyState == nil else { return }
+        proBusyState = .screenshotOCR
+        bannerMessage = ProBusyKind.screenshotOCR.statusText
+        defer { proBusyState = nil }
+
+        do {
+            try proFeatureGate.require(.screenshotOCR)
+            let result = try await proActionEngine.run([
+                .screenshotOCR
+            ], context: ProActionContext(
+                trigger: .manual,
+                clipboardItem: nil,
+                inputText: nil,
+                inputImageData: nil,
+                sourceAppName: NSWorkspace.shared.frontmostApplication?.localizedName,
+                userPrompt: nil
+            ))
+
+            handleProActionResult(result, title: "Screenshot OCR ready", emptyMessage: "No text found in screenshot.")
+        } catch ProFeatureError.locked {
+            bannerMessage = "Pro screenshot OCR is locked."
+        } catch ScreenshotError.cancelled {
+            bannerMessage = "Screenshot OCR cancelled."
+        } catch {
+            bannerMessage = "Screenshot OCR failed: \(error.localizedDescription)"
+        }
     }
 
     func paste(_ clip: ClipItem) {
@@ -173,7 +418,9 @@ final class ClipboardMonitorService: ObservableObject {
             payloadPath: payloadPath,
             sourceApp: NSWorkspace.shared.frontmostApplication?.localizedName,
             isPinned: false,
-            contentHash: parsed.contentHash
+            contentHash: parsed.contentHash,
+            origin: .original,
+            derivedFromClipID: nil
         )
 
         do {
@@ -185,6 +432,110 @@ final class ClipboardMonitorService: ObservableObject {
             AppLog.clipboard.error("Clip insert failed: \(error.localizedDescription)")
             bannerMessage = "Failed to save clipboard item."
         }
+    }
+
+    func copyProResultToPasteboard() {
+        guard let text = proResultText, !text.isEmpty else {
+            bannerMessage = "No result to copy."
+            return
+        }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        lastChangeCount = pasteboard.changeCount
+        lastCapturedHash = nil
+        bannerMessage = "Result copied."
+    }
+
+    func pasteProResult() {
+        guard let text = proResultText, !text.isEmpty else {
+            bannerMessage = "No result to paste."
+            return
+        }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        lastChangeCount = pasteboard.changeCount
+        lastCapturedHash = nil
+        sendPasteKeystroke()
+        bannerMessage = "Result pasted."
+    }
+
+    func saveProResultToHistory(derivedFrom clip: ClipItem?) {
+        guard let text = proResultText?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
+            bannerMessage = "No result to save."
+            return
+        }
+
+        let derivedClip = ClipItem(
+            id: UUID().uuidString,
+            createdAt: Date(),
+            type: .text,
+            plainText: text,
+            payloadPath: nil,
+            sourceApp: "Clipwell Pro",
+            isPinned: false,
+            contentHash: parser.hashText(text),
+            origin: .proDerived,
+            derivedFromClipID: clip?.id
+        )
+
+        do {
+            try repository.insert(derivedClip)
+            pruneHistory(maxCount: settings.historyMaxCount)
+            refresh()
+            bannerMessage = "Result saved as derived clip."
+        } catch {
+            AppLog.clipboard.error("Saving derived pro result failed: \(error.localizedDescription)")
+            bannerMessage = "Failed to save result."
+        }
+    }
+
+    private func handleProActionResult(_ result: ProActionResult, title: String, emptyMessage: String) {
+        let normalizedText = result.text?.trimmingCharacters(in: .whitespacesAndNewlines)
+        proResultTitle = title
+        proResultText = normalizedText
+
+        guard let text = normalizedText, !text.isEmpty else {
+            bannerMessage = emptyMessage
+            return
+        }
+
+        if result.shouldCopyToPasteboard {
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.setString(text, forType: .string)
+            lastChangeCount = pasteboard.changeCount
+            lastCapturedHash = nil
+        }
+
+        if result.shouldSaveToHistory {
+            let clip = ClipItem(
+                id: UUID().uuidString,
+                createdAt: Date(),
+                type: .text,
+                plainText: text,
+                payloadPath: nil,
+                sourceApp: "Clipwell Pro",
+                isPinned: false,
+                contentHash: parser.hashText(text),
+                origin: .proDerived,
+                derivedFromClipID: nil
+            )
+            do {
+                try repository.insert(clip)
+                pruneHistory(maxCount: settings.historyMaxCount)
+                refresh()
+            } catch {
+                AppLog.clipboard.error("Pro result insert failed: \(error.localizedDescription)")
+            }
+        }
+
+        if result.shouldPasteImmediately {
+            sendPasteKeystroke()
+        }
+
+        bannerMessage = "\(title) · result ready"
     }
 
     private func sendPasteKeystroke() {
@@ -221,7 +572,9 @@ final class ClipboardMonitorService: ObservableObject {
                 payloadPath: promotedPayloadPath,
                 sourceApp: clip.sourceApp,
                 isPinned: false,
-                contentHash: clip.contentHash
+                contentHash: clip.contentHash,
+                origin: clip.origin,
+                derivedFromClipID: clip.derivedFromClipID
             )
             try repository.insert(promotedClip)
             pruneHistory(maxCount: settings.historyMaxCount)

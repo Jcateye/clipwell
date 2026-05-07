@@ -6,12 +6,16 @@ import Foundation
 @MainActor
 final class ClipboardDrawerApplication: NSObject, NSApplicationDelegate {
     private let settings = SettingsStore()
-    private lazy var clipboardMonitor = ClipboardMonitorService(settings: settings)
+    private let vocabularyStore = VocabularyStore()
+    private lazy var clipboardMonitor = ClipboardMonitorService(settings: settings, vocabularyStore: vocabularyStore)
+    private lazy var vocabularyViewModel = VocabularyViewModel(store: vocabularyStore)
+    private lazy var vocabularyWindowController = VocabularyWindowController(viewModel: vocabularyViewModel)
     private let conflictService = ShortcutConflictService()
     private var drawerController: DrawerWindowController?
     private var menuBarController: MenuBarController?
     private var settingsWindowController: SettingsWindowController?
     private var hotkeyManager: HotkeyManager?
+    private var aiConnectionValidator: AIConnectionValidator?
     private var cancellables: Set<AnyCancellable> = []
 
     static func main() {
@@ -32,16 +36,33 @@ final class ClipboardDrawerApplication: NSObject, NSApplicationDelegate {
             clearHistory: { [weak self] in self?.clipboardMonitor.clearHistory() },
             openSettings: { [weak self] in self?.settingsWindowController?.show() }
         )
+        let aiConfigStore = AIProviderConfigStore(settings: settings)
+        let aiService = OpenAICompatibleTextAIService(configStore: aiConfigStore)
+        let aiConnectionValidator = AIConnectionValidator(service: aiService)
+        self.aiConnectionValidator = aiConnectionValidator
+
         settingsWindowController = SettingsWindowController(
             settings: settings,
             conflictService: conflictService,
-            saveShortcut: { [weak self] shortcut in
-                self?.hotkeyManager?.updateShortcut(shortcut) ?? false
+            saveShortcut: { [weak self] action, shortcut in
+                self?.hotkeyManager?.updateShortcut(shortcut, for: action) ?? false
+            },
+            aiConnectionValidator: aiConnectionValidator,
+            openVocabulary: { [weak self] in
+                self?.vocabularyWindowController.show()
             }
         )
-        hotkeyManager = HotkeyManager(shortcut: settings.toggleDrawerShortcut) { [weak self] in
-            self?.drawerController?.toggle()
-        }
+        hotkeyManager = HotkeyManager(
+            shortcuts: settings.shortcutsByAction(),
+            actions: [
+                .toggleDrawer: { [weak self] in
+                    self?.drawerController?.toggle()
+                },
+                .screenshotOCR: { [weak self] in
+                    Task { await self?.clipboardMonitor.runScreenshotOCR() }
+                }
+            ]
+        )
 
         settings.$monitoringPaused
             .sink { [weak self] _ in self?.menuBarController?.refreshMenu() }

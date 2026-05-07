@@ -13,7 +13,8 @@ let package = Package(
             linkerSettings: [
                 .linkedLibrary("sqlite3"),
                 .linkedFramework("Carbon"),
-                .linkedFramework("Quartz")
+                .linkedFramework("Quartz"),
+                .linkedFramework("Vision")
             ]
         ),
         .testTarget(

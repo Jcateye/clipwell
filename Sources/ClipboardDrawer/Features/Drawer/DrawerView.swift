@@ -14,11 +14,47 @@ struct DrawerView: View {
 
             VStack(spacing: 14) {
                 header
+                if let bannerMessage = monitor.bannerMessage, !bannerMessage.isEmpty {
+                    bannerView(bannerMessage)
+                }
                 searchBar
                 filterBar
                 clipList
                 if settings.previewEnabled {
-                    ClipPreviewPane(clip: selectedClip, onPaste: onPaste)
+                    ClipPreviewPane(
+                        clip: selectedClip,
+                        proResultTitle: monitor.proResultTitle,
+                        proResultText: monitor.proResultText,
+                        proBusyState: monitor.proBusyState,
+                        onPaste: onPaste,
+                        onImageOCR: { clip in
+                            Task { await monitor.runImageOCR(for: clip) }
+                        },
+                        onAddToVocabulary: { clip in
+                            Task { await monitor.addToVocabulary(for: clip) }
+                        },
+                        onAITranslate: { clip in
+                            Task { await monitor.runAITranslate(for: clip) }
+                        },
+                        onAIRewrite: { clip in
+                            Task { await monitor.runAIRewrite(for: clip) }
+                        },
+                        onAISummary: { clip in
+                            Task { await monitor.runAISummary(for: clip) }
+                        },
+                        onScreenshotOCR: {
+                            Task { await monitor.runScreenshotOCR() }
+                        },
+                        onCopyProResult: {
+                            monitor.copyProResultToPasteboard()
+                        },
+                        onPasteProResult: {
+                            monitor.pasteProResult()
+                        },
+                        onSaveProResult: {
+                            monitor.saveProResultToHistory(derivedFrom: selectedClip)
+                        }
+                    )
                         .frame(height: settings.previewHeight)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
@@ -51,6 +87,21 @@ struct DrawerView: View {
         .onDisappear {
             removeKeyboardMonitor()
         }
+    }
+
+    private func bannerView(_ text: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "sparkles.rectangle.stack")
+                .foregroundStyle(TechTheme.cyan)
+            Text(text)
+                .font(.system(size: 12.5, weight: .medium))
+                .foregroundStyle(TechTheme.text)
+                .lineLimit(2)
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .techCard(selected: true, cornerRadius: 14)
     }
 
     private var header: some View {

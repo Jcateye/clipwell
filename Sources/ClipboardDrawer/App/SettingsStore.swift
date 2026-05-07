@@ -69,7 +69,8 @@ final class SettingsStore: ObservableObject {
     @Published var drawerAnimationSpeed: DrawerAnimationSpeed { didSet { defaults.set(drawerAnimationSpeed.rawValue, forKey: Keys.drawerAnimationSpeed) } }
     @Published var previewEnabled: Bool { didSet { defaults.set(previewEnabled, forKey: Keys.previewEnabled) } }
     @Published var previewHeight: Double { didSet { defaults.set(previewHeight, forKey: Keys.previewHeight) } }
-    @Published var toggleDrawerShortcut: AppShortcut { didSet { persistShortcut(toggleDrawerShortcut) } }
+    @Published var toggleDrawerShortcut: AppShortcut { didSet { persistShortcut(toggleDrawerShortcut, action: .toggleDrawer) } }
+    @Published var screenshotOCRShortcut: AppShortcut { didSet { persistShortcut(screenshotOCRShortcut, action: .screenshotOCR) } }
     @Published var monitoringPaused: Bool { didSet { defaults.set(monitoringPaused, forKey: Keys.monitoringPaused) } }
     @Published var historyMaxCount: Int { didSet { defaults.set(historyMaxCount, forKey: Keys.historyMaxCount) } }
     @Published var dedupConsecutiveEnabled: Bool { didSet { defaults.set(dedupConsecutiveEnabled, forKey: Keys.dedupConsecutiveEnabled) } }
@@ -78,6 +79,14 @@ final class SettingsStore: ObservableObject {
     @Published var launchAtLoginEnabled: Bool { didSet { defaults.set(launchAtLoginEnabled, forKey: Keys.launchAtLoginEnabled) } }
     @Published var ignoredAppListText: String { didSet { defaults.set(ignoredAppListText, forKey: Keys.ignoredAppListText) } }
     @Published var ignoredFileExtensionsText: String { didSet { defaults.set(ignoredFileExtensionsText, forKey: Keys.ignoredFileExtensionsText) } }
+    @Published var proEnabled: Bool { didSet { defaults.set(proEnabled, forKey: Keys.proEnabled) } }
+    @Published var proAIEnabled: Bool { didSet { defaults.set(proAIEnabled, forKey: Keys.proAIEnabled) } }
+    @Published var proAIBaseURL: String { didSet { defaults.set(proAIBaseURL, forKey: Keys.proAIBaseURL) } }
+    @Published var proAIAPIKey: String { didSet { defaults.set(proAIAPIKey, forKey: Keys.proAIAPIKey) } }
+    @Published var proAIModel: String { didSet { defaults.set(proAIModel, forKey: Keys.proAIModel) } }
+    @Published var proVocabularyEnabled: Bool { didSet { defaults.set(proVocabularyEnabled, forKey: Keys.proVocabularyEnabled) } }
+    @Published var proTranslationTargetLanguage: String { didSet { defaults.set(proTranslationTargetLanguage, forKey: Keys.proTranslationTargetLanguage) } }
+    @Published var proOCRLanguagesText: String { didSet { defaults.set(proOCRLanguagesText, forKey: Keys.proOCRLanguagesText) } }
 
     private let defaults: UserDefaults
 
@@ -92,11 +101,18 @@ final class SettingsStore: ObservableObject {
         let storedPreviewHeight = defaults.double(forKey: Keys.previewHeight)
         previewHeight = storedPreviewHeight == 0 ? 260 : storedPreviewHeight
 
-        let keyCodeValue = defaults.object(forKey: Keys.shortcutKeyCode) as? NSNumber
-        let modifiersValue = defaults.object(forKey: Keys.shortcutModifiers) as? NSNumber
+        let keyCodeValue = defaults.object(forKey: Keys.shortcutToggleDrawerKeyCode) as? NSNumber
+        let modifiersValue = defaults.object(forKey: Keys.shortcutToggleDrawerModifiers) as? NSNumber
         toggleDrawerShortcut = AppShortcut(
             keyCode: keyCodeValue?.uint32Value ?? AppShortcut.defaultToggleDrawer.keyCode,
             modifierFlags: modifiersValue?.uint32Value ?? AppShortcut.defaultToggleDrawer.modifierFlags
+        )
+
+        let screenshotKeyCodeValue = defaults.object(forKey: Keys.shortcutScreenshotOCRKeyCode) as? NSNumber
+        let screenshotModifiersValue = defaults.object(forKey: Keys.shortcutScreenshotOCRModifiers) as? NSNumber
+        screenshotOCRShortcut = AppShortcut(
+            keyCode: screenshotKeyCodeValue?.uint32Value ?? AppShortcut.defaultScreenshotOCR.keyCode,
+            modifierFlags: screenshotModifiersValue?.uint32Value ?? AppShortcut.defaultScreenshotOCR.modifierFlags
         )
 
         monitoringPaused = defaults.bool(forKey: Keys.monitoringPaused)
@@ -108,15 +124,32 @@ final class SettingsStore: ObservableObject {
         launchAtLoginEnabled = defaults.bool(forKey: Keys.launchAtLoginEnabled)
         ignoredAppListText = defaults.string(forKey: Keys.ignoredAppListText) ?? ""
         ignoredFileExtensionsText = defaults.string(forKey: Keys.ignoredFileExtensionsText) ?? ""
+        proEnabled = defaults.object(forKey: Keys.proEnabled) as? Bool ?? true
+        proAIEnabled = defaults.object(forKey: Keys.proAIEnabled) as? Bool ?? true
+        proAIBaseURL = defaults.string(forKey: Keys.proAIBaseURL) ?? "http://127.0.0.1:4000/v1"
+        proAIAPIKey = defaults.string(forKey: Keys.proAIAPIKey) ?? ""
+        proAIModel = defaults.string(forKey: Keys.proAIModel) ?? "gpt-5.4-mini"
+        proVocabularyEnabled = defaults.object(forKey: Keys.proVocabularyEnabled) as? Bool ?? true
+        proTranslationTargetLanguage = defaults.string(forKey: Keys.proTranslationTargetLanguage) ?? "English"
+        proOCRLanguagesText = defaults.string(forKey: Keys.proOCRLanguagesText) ?? "zh-Hans,en-US"
     }
 
     func shortcutsByAction() -> [AppAction: AppShortcut] {
-        [.toggleDrawer: toggleDrawerShortcut]
+        [
+            .toggleDrawer: toggleDrawerShortcut,
+            .screenshotOCR: screenshotOCRShortcut,
+        ]
     }
 
-    private func persistShortcut(_ shortcut: AppShortcut) {
-        defaults.set(shortcut.keyCode, forKey: Keys.shortcutKeyCode)
-        defaults.set(shortcut.modifierFlags, forKey: Keys.shortcutModifiers)
+    private func persistShortcut(_ shortcut: AppShortcut, action: AppAction) {
+        switch action {
+        case .toggleDrawer:
+            defaults.set(shortcut.keyCode, forKey: Keys.shortcutToggleDrawerKeyCode)
+            defaults.set(shortcut.modifierFlags, forKey: Keys.shortcutToggleDrawerModifiers)
+        case .screenshotOCR:
+            defaults.set(shortcut.keyCode, forKey: Keys.shortcutScreenshotOCRKeyCode)
+            defaults.set(shortcut.modifierFlags, forKey: Keys.shortcutScreenshotOCRModifiers)
+        }
     }
 
     func shouldIgnore(appName: String?, bundleIdentifier: String?) -> Bool {
@@ -151,6 +184,21 @@ final class SettingsStore: ObservableObject {
         )
     }
 
+    var proOCRLanguages: [String] {
+        proOCRLanguagesText
+            .split { $0.isNewline || $0 == "," || $0 == ";" || $0 == " " || $0 == "\t" }
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    var proAIConfig: OpenAICompatibleConfig {
+        OpenAICompatibleConfig(
+            baseURL: proAIBaseURL,
+            apiKey: proAIAPIKey,
+            model: proAIModel
+        )
+    }
+
     private enum Keys {
         static let visualTheme = "visual_theme"
         static let drawerEdge = "drawer_edge"
@@ -158,8 +206,10 @@ final class SettingsStore: ObservableObject {
         static let drawerAnimationSpeed = "drawer_animation_speed"
         static let previewEnabled = "preview_enabled"
         static let previewHeight = "preview_height"
-        static let shortcutKeyCode = "shortcut_toggle_drawer_keycode"
-        static let shortcutModifiers = "shortcut_toggle_drawer_modifiers"
+        static let shortcutToggleDrawerKeyCode = "shortcut_toggle_drawer_keycode"
+        static let shortcutToggleDrawerModifiers = "shortcut_toggle_drawer_modifiers"
+        static let shortcutScreenshotOCRKeyCode = "shortcut_screenshot_ocr_keycode"
+        static let shortcutScreenshotOCRModifiers = "shortcut_screenshot_ocr_modifiers"
         static let monitoringPaused = "monitoring_paused"
         static let historyMaxCount = "history_max_count"
         static let dedupConsecutiveEnabled = "dedup_consecutive_enabled"
@@ -168,5 +218,13 @@ final class SettingsStore: ObservableObject {
         static let launchAtLoginEnabled = "launch_at_login_enabled"
         static let ignoredAppListText = "ignored_app_list_text"
         static let ignoredFileExtensionsText = "ignored_file_extensions_text"
+        static let proEnabled = "pro_enabled"
+        static let proAIEnabled = "pro_ai_enabled"
+        static let proAIBaseURL = "pro_ai_base_url"
+        static let proAIAPIKey = "pro_ai_api_key"
+        static let proAIModel = "pro_ai_model"
+        static let proVocabularyEnabled = "pro_vocabulary_enabled"
+        static let proTranslationTargetLanguage = "pro_translation_target_language"
+        static let proOCRLanguagesText = "pro_ocr_languages_text"
     }
 }

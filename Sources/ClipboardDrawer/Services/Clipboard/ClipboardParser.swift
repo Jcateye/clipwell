@@ -127,6 +127,10 @@ final class ClipboardParser {
         return bitmap.representation(using: .png, properties: [:])
     }
 
+    func hashText(_ text: String) -> String {
+        hash(data: Data(text.utf8))
+    }
+
     private func hash(data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }

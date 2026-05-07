@@ -3,12 +3,14 @@ import Foundation
 
 enum AppAction: String, CaseIterable, Identifiable {
     case toggleDrawer
+    case screenshotOCR
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
         case .toggleDrawer: "Toggle Drawer"
+        case .screenshotOCR: "Screenshot OCR"
         }
     }
 }
@@ -18,6 +20,7 @@ struct AppShortcut: Codable, Equatable, Hashable {
     var modifierFlags: UInt32
 
     static let defaultToggleDrawer = AppShortcut(keyCode: 49, modifierFlags: UInt32(optionKey))
+    static let defaultScreenshotOCR = AppShortcut(keyCode: 15, modifierFlags: UInt32(optionKey | shiftKey))
 
     var isModifierOnly: Bool {
         keyCode == UInt32.max || modifierFlags == 0

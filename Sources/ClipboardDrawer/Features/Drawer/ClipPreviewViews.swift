@@ -4,7 +4,19 @@ import SwiftUI
 
 struct ClipPreviewPane: View {
     let clip: ClipItem?
+    let proResultTitle: String?
+    let proResultText: String?
+    let proBusyState: ProBusyKind?
     let onPaste: (ClipItem) -> Void
+    let onImageOCR: (ClipItem) -> Void
+    let onAddToVocabulary: (ClipItem) -> Void
+    let onAITranslate: (ClipItem) -> Void
+    let onAIRewrite: (ClipItem) -> Void
+    let onAISummary: (ClipItem) -> Void
+    let onScreenshotOCR: () -> Void
+    let onCopyProResult: () -> Void
+    let onPasteProResult: () -> Void
+    let onSaveProResult: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -21,17 +33,87 @@ struct ClipPreviewPane: View {
                     }
                 }
                 Spacer()
-                if let clip {
-                    Button("Paste") {
-                        onPaste(clip)
+                if let proResultText, !proResultText.isEmpty {
+                    HStack(spacing: 8) {
+                        Button("Copy Result") {
+                            onCopyProResult()
+                        }
+                        .buttonStyle(TechSecondaryButtonStyle())
+                        .disabled(proBusyState != nil)
+                        Button("Save Result") {
+                            onSaveProResult()
+                        }
+                        .buttonStyle(TechSecondaryButtonStyle())
+                        .disabled(proBusyState != nil)
+                        Button("Paste Result") {
+                            onPasteProResult()
+                        }
+                        .buttonStyle(TechPrimaryButtonStyle())
+                        .disabled(proBusyState != nil)
+                        Button(proBusyState == .screenshotOCR ? "Shot OCR…" : "Shot OCR") {
+                            onScreenshotOCR()
+                        }
+                        .buttonStyle(TechSecondaryButtonStyle())
+                        .disabled(proBusyState != nil)
                     }
-                    .keyboardShortcut(.return, modifiers: [])
-                    .buttonStyle(TechPrimaryButtonStyle())
+                } else if let clip {
+                    HStack(spacing: 8) {
+                        if clip.type == .media, clip.documentURL == nil {
+                            Button(proBusyState == .imageOCR ? "Image OCR…" : "Image OCR") {
+                                onImageOCR(clip)
+                            }
+                            .buttonStyle(TechSecondaryButtonStyle())
+                            .disabled(proBusyState != nil)
+                        }
+                        if clip.type == .text || clip.type == .rtf || clip.type == .html {
+                            Button(proBusyState == .addToVocabulary ? "Add Word…" : "Add Word") {
+                                onAddToVocabulary(clip)
+                            }
+                            .buttonStyle(TechSecondaryButtonStyle())
+                            .disabled(proBusyState != nil)
+                            Button(proBusyState == .aiTranslate ? "Translate…" : "Translate") {
+                                onAITranslate(clip)
+                            }
+                            .buttonStyle(TechSecondaryButtonStyle())
+                            .disabled(proBusyState != nil)
+                            Button(proBusyState == .aiRewrite ? "Rewrite…" : "Rewrite") {
+                                onAIRewrite(clip)
+                            }
+                            .buttonStyle(TechSecondaryButtonStyle())
+                            .disabled(proBusyState != nil)
+                            Button(proBusyState == .aiSummarize ? "Summarize…" : "Summarize") {
+                                onAISummary(clip)
+                            }
+                            .buttonStyle(TechSecondaryButtonStyle())
+                            .disabled(proBusyState != nil)
+                        }
+                        Button(proBusyState == .screenshotOCR ? "Shot OCR…" : "Shot OCR") {
+                            onScreenshotOCR()
+                        }
+                        .buttonStyle(TechSecondaryButtonStyle())
+                        .disabled(proBusyState != nil)
+                        Button("Paste") {
+                            onPaste(clip)
+                        }
+                        .keyboardShortcut(.return, modifiers: [])
+                        .buttonStyle(TechPrimaryButtonStyle())
+                        .disabled(proBusyState != nil)
+                    }
+                } else {
+                    Button(proBusyState == .screenshotOCR ? "Shot OCR…" : "Shot OCR") {
+                        onScreenshotOCR()
+                    }
+                    .buttonStyle(TechSecondaryButtonStyle())
+                    .disabled(proBusyState != nil)
                 }
             }
 
             Group {
-                if let clip {
+                if let proBusyState {
+                    busyView(proBusyState.statusText)
+                } else if let proResultText, !proResultText.isEmpty {
+                    proResultView(title: proResultTitle ?? "Pro Result", text: proResultText)
+                } else if let clip {
                     preview(for: clip)
                 } else {
                     ContentUnavailableView(
@@ -83,6 +165,36 @@ struct ClipPreviewPane: View {
         case .text:
             textPreview(clip.plainText ?? "")
         }
+    }
+
+    private func busyView(_ text: String) -> some View {
+        VStack(spacing: 12) {
+            ProgressView()
+                .progressViewStyle(.circular)
+                .tint(TechTheme.cyan)
+            Text(text)
+                .font(.system(size: 13.5, weight: .medium))
+                .foregroundStyle(TechTheme.text)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
+    }
+
+    private func proResultView(title: String, text: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(title.uppercased())
+                    .font(TechTheme.labelFont)
+                    .tracking(0.8)
+                    .foregroundStyle(TechTheme.cyan)
+                Spacer()
+                Text("TEXT")
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundStyle(TechTheme.green)
+            }
+            textPreview(text)
+        }
+        .padding(12)
     }
 
     private func textPreview(_ value: String) -> some View {

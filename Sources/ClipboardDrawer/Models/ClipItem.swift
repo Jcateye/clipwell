@@ -39,6 +39,11 @@ enum ClipFilter: String, CaseIterable, Identifiable {
     }
 }
 
+enum ClipOrigin: String, Codable {
+    case original
+    case proDerived
+}
+
 struct ClipItem: Identifiable, Hashable {
     let id: String
     let createdAt: Date
@@ -48,6 +53,8 @@ struct ClipItem: Identifiable, Hashable {
     let sourceApp: String?
     let isPinned: Bool
     let contentHash: String
+    let origin: ClipOrigin
+    let derivedFromClipID: String?
 
     var title: String {
         if type == .media, let documentURL {
@@ -92,7 +99,12 @@ struct ClipItem: Identifiable, Hashable {
     }
 
     var kindDisplayName: String {
-        return type.displayName
+        switch origin {
+        case .original:
+            return type.displayName
+        case .proDerived:
+            return "Pro \(type.displayName)"
+        }
     }
 
     private static let imageExtensions: Set<String> = ["jpg", "jpeg", "png", "gif", "heic", "webp", "tiff"]

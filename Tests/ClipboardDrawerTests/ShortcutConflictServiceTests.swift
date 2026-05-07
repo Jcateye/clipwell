@@ -24,4 +24,16 @@ final class ShortcutConflictServiceTests: XCTestCase {
         XCTAssertFalse(result.isHardConflict)
         XCTAssertNotNil(result.warning)
     }
+
+    func testRejectsDuplicateAcrossActions() {
+        let shortcut = AppShortcut(keyCode: 15, modifierFlags: UInt32(optionKey | shiftKey))
+        let result = ShortcutConflictService().validate(
+            shortcut: shortcut,
+            for: .screenshotOCR,
+            existing: [.toggleDrawer: shortcut]
+        )
+
+        XCTAssertTrue(result.isHardConflict)
+        XCTAssertEqual(result.message, "\(shortcut.displayString) is already assigned to Toggle Drawer.")
+    }
 }
