@@ -21,10 +21,24 @@ final class ScreenshotService: @unchecked Sendable {
             try? FileManager.default.removeItem(at: url)
         }
 
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw ScreenshotError.missingCaptureFile
+        }
+
         return try Data(contentsOf: url)
     }
 }
 
-enum ScreenshotError: Error {
+enum ScreenshotError: LocalizedError, Equatable {
     case cancelled
+    case missingCaptureFile
+
+    var errorDescription: String? {
+        switch self {
+        case .cancelled:
+            return "Screenshot OCR was cancelled."
+        case .missingCaptureFile:
+            return "Clipwell could not read the captured screenshot. Please try again."
+        }
+    }
 }

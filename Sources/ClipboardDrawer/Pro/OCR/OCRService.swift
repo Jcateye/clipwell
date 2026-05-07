@@ -61,8 +61,18 @@ final class OCRService: @unchecked Sendable {
     }
 }
 
-enum OCRError: Error {
+enum OCRError: LocalizedError, Equatable {
     case invalidImage
+    case noTextFound
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidImage:
+            return "Clipwell could not read this image. Try copying a PNG, JPG, or screenshot image."
+        case .noTextFound:
+            return "No readable text was found in the image."
+        }
+    }
 }
 
 private extension NSImage {
