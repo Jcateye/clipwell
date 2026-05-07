@@ -9,8 +9,8 @@ MACOS_DIR="$APP_DIR/Contents/MacOS"
 RESOURCES_DIR="$APP_DIR/Contents/Resources"
 
 cd "$ROOT_DIR"
-swift build -c "$CONFIGURATION"
-BIN_DIR="$(swift build -c "$CONFIGURATION" --show-bin-path)"
+swift build -c "$CONFIGURATION" >&2
+BIN_DIR="$(swift build -c "$CONFIGURATION" --show-bin-path 2>/dev/null)"
 
 rm -rf "$APP_DIR"
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
