@@ -6,13 +6,19 @@ struct OpenAICompatibleConfig: Sendable {
     var model: String
 }
 
-enum OpenAICompatibleError: LocalizedError {
+enum OpenAICompatibleError: LocalizedError, Equatable {
+    case missingBaseURL
+    case missingModel
     case invalidBaseURL
     case invalidResponse
     case upstream(String)
 
     var errorDescription: String? {
         switch self {
+        case .missingBaseURL:
+            return "AI base URL is not configured. Open Settings and add your OpenAI-compatible endpoint."
+        case .missingModel:
+            return "AI model is not configured. Open Settings and choose a model."
         case .invalidBaseURL:
             return "AI base URL is invalid."
         case .invalidResponse:
@@ -33,7 +39,7 @@ final class OpenAICompatibleTextAIService: TextAIService, @unchecked Sendable {
     }
 
     func validateConnection() async throws {
-        let config = await MainActor.run { configStore.current() }
+        let config = try await validatedConfig()
         guard let url = URL(string: config.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/")).appending("/models")) else {
             throw OpenAICompatibleError.invalidBaseURL
         }
@@ -82,7 +88,7 @@ final class OpenAICompatibleTextAIService: TextAIService, @unchecked Sendable {
     }
 
     private func complete(system: String, user: String) async throws -> String {
-        let config = await MainActor.run { configStore.current() }
+        let config = try await validatedConfig()
         guard let url = URL(string: config.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/")).appending("/chat/completions")) else {
             throw OpenAICompatibleError.invalidBaseURL
         }
@@ -119,6 +125,22 @@ final class OpenAICompatibleTextAIService: TextAIService, @unchecked Sendable {
             throw OpenAICompatibleError.invalidResponse
         }
         return text
+    }
+
+    private func validatedConfig() async throws -> OpenAICompatibleConfig {
+        var config = await MainActor.run { configStore.current() }
+        config.baseURL = config.baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        config.model = config.model.trimmingCharacters(in: .whitespacesAndNewlines)
+        config.apiKey = config.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !config.baseURL.isEmpty else {
+            throw OpenAICompatibleError.missingBaseURL
+        }
+        guard !config.model.isEmpty else {
+            throw OpenAICompatibleError.missingModel
+        }
+
+        return config
     }
 }
 
