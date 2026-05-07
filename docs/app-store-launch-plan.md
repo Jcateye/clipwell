@@ -6,7 +6,7 @@ Recommended product name: **Clipwell**
 
 Company / seller identity:
 
-- English: **Mio Labs**
+- English: **MioMiao Labs LLC**
 - Chinese legal name: **深圳弥傲科技有限公司**
 
 Positioning: a private, local-first clipboard drawer for Mac users who copy text, rich content, images, and files all day, but do not want another cloud sync surface.
@@ -50,7 +50,7 @@ Current state:
 
 - Swift Package executable named `ClipboardDrawer`.
 - Manual `.app` packaging script with ad-hoc signing.
-- `Info.plist` uses bundle ID `com.miolabs.clipwell`, display name `Clipwell`, minimum macOS 14.0, and `LSUIElement=true`.
+- `Info.plist` uses bundle ID `com.miomiaolabs.clipwell`, display name `Clipwell`, minimum macOS 14.0, and `LSUIElement=true`.
 - No App Sandbox entitlements file is present.
 - No Xcode project, Archive scheme, asset catalog, or App Store signing setup is present.
 
@@ -58,7 +58,7 @@ Required changes:
 
 1. Create an Xcode macOS App target that reuses the existing Swift source files.
 2. Set product display name to `Clipwell`.
-3. Choose final bundle ID, preferably `com.miolabs.clipwell`.
+3. Choose final bundle ID, preferably `com.miomiaolabs.clipwell`.
 4. Add App Sandbox entitlement. Apple states App Sandbox is required for Mac App Store distribution.
 5. Add hardened runtime/signing configuration through Xcode archive flow.
 6. Add app icon asset catalog and `.icns` generation flow.
@@ -91,7 +91,7 @@ Review-sensitive items:
 
 1. Enroll or confirm Apple Developer Program membership.
 2. In Certificates, Identifiers & Profiles, create or confirm Mac App Store distribution assets.
-3. Create bundle ID `com.miolabs.clipwell`.
+3. Create bundle ID `com.miomiaolabs.clipwell`.
 4. Build an Xcode Archive for `Any Mac`.
 5. Validate archive locally.
 6. Upload with Xcode Organizer or Transporter.
@@ -107,9 +107,9 @@ Create the app record:
 - Platform: macOS
 - Name: `Clipwell`
 - Primary language: English
-- Bundle ID: `com.miolabs.clipwell`
+- Bundle ID: `com.miomiaolabs.clipwell`
 - SKU: `clipwell-macos-001`
-- Seller / company: `Mio Labs` / `深圳弥傲科技有限公司`
+- Seller / company: `MioMiao Labs LLC` / `深圳弥傲科技有限公司`
 - Category: Productivity or Utilities. Recommendation: Productivity.
 - Age rating: likely 4+, assuming no web content or user sharing features.
 

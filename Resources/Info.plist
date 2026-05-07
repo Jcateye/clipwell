@@ -5,7 +5,7 @@
     <key>CFBundleExecutable</key>
     <string>ClipboardDrawer</string>
     <key>CFBundleIdentifier</key>
-    <string>com.miolabs.clipwell</string>
+    <string>com.miomiaolabs.clipwell</string>
     <key>CFBundleName</key>
     <string>Clipwell</string>
     <key>CFBundleDisplayName</key>
