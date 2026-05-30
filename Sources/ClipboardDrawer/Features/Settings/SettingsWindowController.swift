@@ -29,6 +29,8 @@ final class SettingsWindowController {
             )
             window.title = "Clipboard Drawer Settings"
             window.center()
+            window.backgroundColor = .clear
+            window.isOpaque = false
             window.contentView = NSHostingView(rootView: view)
             window.isReleasedWhenClosed = false
             self.window = window

@@ -19,7 +19,8 @@ struct AppShortcut: Codable, Equatable, Hashable {
     var keyCode: UInt32
     var modifierFlags: UInt32
 
-    static let defaultToggleDrawer = AppShortcut(keyCode: 49, modifierFlags: UInt32(optionKey))
+    static let internalLegacyDefaultToggleDrawer = AppShortcut(keyCode: 49, modifierFlags: UInt32(optionKey))
+    static let defaultToggleDrawer = AppShortcut(keyCode: 9, modifierFlags: UInt32(cmdKey | shiftKey))
     static let defaultScreenshotOCR = AppShortcut(keyCode: 15, modifierFlags: UInt32(optionKey | shiftKey))
 
     var isModifierOnly: Bool {

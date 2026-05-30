@@ -2,10 +2,11 @@ import SwiftUI
 
 struct VocabularyView: View {
     @ObservedObject var viewModel: VocabularyViewModel
+    @ObservedObject var settings: SettingsStore
 
     var body: some View {
         ZStack {
-            TechBackground()
+            TechBackground(theme: settings.visualTheme)
             VStack(spacing: 14) {
                 header
                 searchBar
@@ -17,6 +18,9 @@ struct VocabularyView: View {
             .padding(18)
         }
         .frame(width: 560, height: 420)
+        .background(TechTheme.palette(for: settings.visualTheme).background)
+        .preferredColorScheme(settings.visualTheme.preferredColorScheme)
+        .id(settings.visualTheme)
     }
 
     private var header: some View {
@@ -49,7 +53,7 @@ struct VocabularyView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .techCard(cornerRadius: 14)
+        .techCard(cornerRadius: 7)
     }
 
     private func statusView(_ text: String) -> some View {
@@ -63,7 +67,7 @@ struct VocabularyView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .techCard(selected: true, cornerRadius: 14)
+        .techCard(selected: true, cornerRadius: 7)
     }
 
     private var list: some View {
@@ -85,7 +89,7 @@ struct VocabularyView: View {
             }
             .padding(8)
         }
-        .techCard(cornerRadius: 18)
+        .techCard(cornerRadius: 9)
     }
 
     private func row(_ item: VocabularyItem) -> some View {
@@ -120,9 +124,9 @@ struct VocabularyView: View {
             }
         }
         .padding(12)
-        .background(TechTheme.background.opacity(0.28), in: RoundedRectangle(cornerRadius: 14))
+        .background(TechTheme.background.opacity(0.28), in: RoundedRectangle(cornerRadius: 7))
         .overlay {
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: 7)
                 .stroke(TechTheme.line.opacity(0.5), lineWidth: 0.7)
         }
     }

@@ -2,6 +2,34 @@
 import XCTest
 
 final class ClipRepositoryTests: XCTestCase {
+    func testUpdatePlainTextChangesEditableTextClipOnly() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let repository = ClipRepository(databaseURL: directory.appendingPathComponent("clips.sqlite"))
+        let textClip = ClipItem(
+            id: "text",
+            createdAt: Date(timeIntervalSince1970: 1),
+            type: .text,
+            plainText: "before",
+            payloadPath: nil,
+            sourceApp: "Tests",
+            isPinned: false,
+            contentHash: "before-hash",
+            origin: .original,
+            derivedFromClipID: nil
+        )
+
+        try repository.insert(textClip)
+        try repository.updatePlainText(id: textClip.id, text: "after", contentHash: "after-hash")
+
+        let updatedClip = try XCTUnwrap(repository.fetch(limit: 1).first)
+        XCTAssertEqual(updatedClip.plainText, "after")
+        XCTAssertEqual(updatedClip.contentHash, "after-hash")
+        XCTAssertEqual(updatedClip.createdAt, textClip.createdAt)
+    }
+
     func testPruneKeepsNewestAndReportsPayloads() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

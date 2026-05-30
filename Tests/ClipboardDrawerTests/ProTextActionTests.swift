@@ -3,19 +3,35 @@ import XCTest
 
 @MainActor
 final class ProTextActionTests: XCTestCase {
-    func testTranslateTextActionUsesConfiguredTargetLanguage() async throws {
+    func testTranslateTextActionTranslatesChineseToEnglish() async throws {
         let suiteName = "ProTextActionTests.translate.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let settings = SettingsStore(defaults: defaults)
-        settings.proTranslationTargetLanguage = "Japanese"
+        settings.proTranslationTarget = .english
+
+        let action = TranslateTextAction(service: MockTextAIService(), settings: settings)
+        let result = try await action.run(context(inputText: " 你好 "))
+
+        XCTAssertEqual(result.metadata["action"], ProActionKind.translateText.rawValue)
+        XCTAssertEqual(result.metadata["targetLanguage"], "English")
+        XCTAssertEqual(result.text, "[AI Translate · Mock → English]\n\n你好")
+        XCTAssertFalse(result.shouldSaveToHistory)
+    }
+
+    func testTranslateTextActionTranslatesNonChineseToSimplifiedChinese() async throws {
+        let suiteName = "ProTextActionTests.translate.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let settings = SettingsStore(defaults: defaults)
+        settings.proTranslationTarget = .simplifiedChinese
 
         let action = TranslateTextAction(service: MockTextAIService(), settings: settings)
         let result = try await action.run(context(inputText: " hello "))
 
         XCTAssertEqual(result.metadata["action"], ProActionKind.translateText.rawValue)
-        XCTAssertEqual(result.metadata["targetLanguage"], "Japanese")
-        XCTAssertEqual(result.text, "[AI Translate · Mock → Japanese]\n\nhello")
+        XCTAssertEqual(result.metadata["targetLanguage"], "Simplified Chinese")
+        XCTAssertEqual(result.text, "[AI Translate · Mock → Simplified Chinese]\n\nhello")
         XCTAssertFalse(result.shouldSaveToHistory)
     }
 

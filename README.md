@@ -12,14 +12,14 @@ It runs as a menu bar app, keeps recent clipboard items on the Mac, and lets you
 - Text, rich text, HTML, image, media, and document/file URL handling
 - Preview pane for supported clipboard content
 - Optional auto-paste and auto-close behavior
-- Pro actions: add to vocabulary, image OCR, screenshot OCR, AI translate, AI rewrite, and AI summarize
+- Pro actions: image OCR, screenshot OCR, and translation with macOS Translation by default or an OpenAI-compatible endpoint when configured
 - Local vocabulary window with search and delete
 - Pause monitoring, clear history, history limit, and ignored apps
 - SQLite-backed local storage with payload files
 
 ## Requirements
 
-- macOS 14 or later
+- macOS 15 or later
 - Xcode / Swift toolchain with Swift 6 support
 
 ## Development

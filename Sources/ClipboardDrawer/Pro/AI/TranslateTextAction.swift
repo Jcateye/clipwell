@@ -13,7 +13,9 @@ final class TranslateTextAction: ProAction, @unchecked Sendable {
 
     func run(_ context: ProActionContext) async throws -> ProActionResult {
         let text = context.inputText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let targetLanguage = await MainActor.run { settings.proTranslationTargetLanguage }
+        let targetLanguage = await MainActor.run {
+            TranslationLanguageResolver.targetDisplayName(settings.proTranslationTarget)
+        }
         let translated = try await service.translate(text, targetLanguage: targetLanguage)
         return ProActionResult(
             text: translated,

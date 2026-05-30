@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import SwiftUI
 
 enum DrawerEdge: String, CaseIterable, Identifiable {
     case left
@@ -27,41 +28,45 @@ enum DrawerAnimationSpeed: String, CaseIterable, Identifiable {
 }
 
 enum AppVisualTheme: String, CaseIterable, Identifiable {
-    case light
-    case graphite
-    case slate
-    case warm
-    case tech
+    case glassDay
+    case glassNight
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
-        case .light: "Light"
-        case .graphite: "Graphite"
-        case .slate: "Slate"
-        case .warm: "Warm"
-        case .tech: "Tech"
+        case .glassDay: "Day"
+        case .glassNight: "Night"
         }
     }
 
     var subtitle: String {
         switch self {
-        case .light: "Clean light interface"
-        case .graphite: "Quiet neutral dark"
-        case .slate: "Soft blue-gray"
-        case .warm: "Muted warm dark"
-        case .tech: "High contrast cyan"
+        case .glassDay: "Frosted translucent daylight"
+        case .glassNight: "Frosted translucent night"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .glassDay: "sun.max"
+        case .glassNight: "moon"
+        }
+    }
+
+    var preferredColorScheme: ColorScheme {
+        switch self {
+        case .glassDay: .light
+        case .glassNight: .dark
         }
     }
 }
 
 @MainActor
 final class SettingsStore: ObservableObject {
-    var visualTheme: AppVisualTheme {
+    @Published var visualTheme: AppVisualTheme {
         didSet {
             defaults.set(visualTheme.rawValue, forKey: Keys.visualTheme)
-            objectWillChange.send()
         }
     }
     @Published var drawerEdge: DrawerEdge { didSet { defaults.set(drawerEdge.rawValue, forKey: Keys.drawerEdge) } }
@@ -80,19 +85,34 @@ final class SettingsStore: ObservableObject {
     @Published var ignoredAppListText: String { didSet { defaults.set(ignoredAppListText, forKey: Keys.ignoredAppListText) } }
     @Published var ignoredFileExtensionsText: String { didSet { defaults.set(ignoredFileExtensionsText, forKey: Keys.ignoredFileExtensionsText) } }
     @Published var proEnabled: Bool { didSet { defaults.set(proEnabled, forKey: Keys.proEnabled) } }
+    @Published var autoOCRImagesEnabled: Bool { didSet { defaults.set(autoOCRImagesEnabled, forKey: Keys.autoOCRImagesEnabled) } }
     @Published var proAIEnabled: Bool { didSet { defaults.set(proAIEnabled, forKey: Keys.proAIEnabled) } }
     @Published var proAIBaseURL: String { didSet { defaults.set(proAIBaseURL, forKey: Keys.proAIBaseURL) } }
     @Published var proAIAPIKey: String { didSet { defaults.set(proAIAPIKey, forKey: Keys.proAIAPIKey) } }
     @Published var proAIModel: String { didSet { defaults.set(proAIModel, forKey: Keys.proAIModel) } }
     @Published var proVocabularyEnabled: Bool { didSet { defaults.set(proVocabularyEnabled, forKey: Keys.proVocabularyEnabled) } }
+    @Published var proTranslationSourceLanguage: TranslationLanguage {
+        didSet { defaults.set(proTranslationSourceLanguage.rawValue, forKey: Keys.proTranslationSourceLanguage) }
+    }
     @Published var proTranslationTargetLanguage: String { didSet { defaults.set(proTranslationTargetLanguage, forKey: Keys.proTranslationTargetLanguage) } }
+    @Published var proTranslationTarget: TranslationLanguage {
+        didSet {
+            defaults.set(proTranslationTarget.rawValue, forKey: Keys.proTranslationTarget)
+            proTranslationTargetLanguage = proTranslationTarget.displayName
+        }
+    }
     @Published var proOCRLanguagesText: String { didSet { defaults.set(proOCRLanguagesText, forKey: Keys.proOCRLanguagesText) } }
 
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        visualTheme = AppVisualTheme(rawValue: defaults.string(forKey: Keys.visualTheme) ?? "") ?? .graphite
+        let storedTheme = defaults.string(forKey: Keys.visualTheme) ?? ""
+        let migratedTheme = Self.migratedVisualTheme(storedTheme)
+        visualTheme = migratedTheme
+        if storedTheme != migratedTheme.rawValue {
+            defaults.set(migratedTheme.rawValue, forKey: Keys.visualTheme)
+        }
         drawerEdge = DrawerEdge(rawValue: defaults.string(forKey: Keys.drawerEdge) ?? "") ?? .right
         let width = defaults.double(forKey: Keys.drawerWidth)
         drawerWidth = width == 0 ? 420 : width
@@ -103,10 +123,16 @@ final class SettingsStore: ObservableObject {
 
         let keyCodeValue = defaults.object(forKey: Keys.shortcutToggleDrawerKeyCode) as? NSNumber
         let modifiersValue = defaults.object(forKey: Keys.shortcutToggleDrawerModifiers) as? NSNumber
-        toggleDrawerShortcut = AppShortcut(
+        let storedToggleShortcut = AppShortcut(
             keyCode: keyCodeValue?.uint32Value ?? AppShortcut.defaultToggleDrawer.keyCode,
             modifierFlags: modifiersValue?.uint32Value ?? AppShortcut.defaultToggleDrawer.modifierFlags
         )
+        let migratedToggleShortcut = Self.migratedToggleDrawerShortcut(storedToggleShortcut)
+        toggleDrawerShortcut = migratedToggleShortcut
+        if migratedToggleShortcut != storedToggleShortcut {
+            defaults.set(migratedToggleShortcut.keyCode, forKey: Keys.shortcutToggleDrawerKeyCode)
+            defaults.set(migratedToggleShortcut.modifierFlags, forKey: Keys.shortcutToggleDrawerModifiers)
+        }
 
         let screenshotKeyCodeValue = defaults.object(forKey: Keys.shortcutScreenshotOCRKeyCode) as? NSNumber
         let screenshotModifiersValue = defaults.object(forKey: Keys.shortcutScreenshotOCRModifiers) as? NSNumber
@@ -125,20 +151,49 @@ final class SettingsStore: ObservableObject {
         ignoredAppListText = defaults.string(forKey: Keys.ignoredAppListText) ?? ""
         ignoredFileExtensionsText = defaults.string(forKey: Keys.ignoredFileExtensionsText) ?? ""
         proEnabled = defaults.object(forKey: Keys.proEnabled) as? Bool ?? true
+        autoOCRImagesEnabled = defaults.object(forKey: Keys.autoOCRImagesEnabled) as? Bool ?? false
         proAIEnabled = defaults.object(forKey: Keys.proAIEnabled) as? Bool ?? true
         proAIBaseURL = defaults.string(forKey: Keys.proAIBaseURL) ?? "http://127.0.0.1:4000/v1"
         proAIAPIKey = defaults.string(forKey: Keys.proAIAPIKey) ?? ""
         proAIModel = defaults.string(forKey: Keys.proAIModel) ?? "gpt-5.4-mini"
         proVocabularyEnabled = defaults.object(forKey: Keys.proVocabularyEnabled) as? Bool ?? true
-        proTranslationTargetLanguage = defaults.string(forKey: Keys.proTranslationTargetLanguage) ?? "English"
+        proTranslationSourceLanguage = TranslationLanguage(rawValue: defaults.string(forKey: Keys.proTranslationSourceLanguage) ?? "") ?? .auto
+        let storedTarget = defaults.string(forKey: Keys.proTranslationTarget)
+        let legacyTargetName = defaults.string(forKey: Keys.proTranslationTargetLanguage)
+        let translationTarget = TranslationLanguage(rawValue: storedTarget ?? "")
+            ?? Self.migratedTranslationLanguage(displayName: legacyTargetName)
+            ?? TranslationLanguageResolver.defaultTargetLanguage()
+        proTranslationTarget = translationTarget
+        proTranslationTargetLanguage = translationTarget.displayName
         proOCRLanguagesText = defaults.string(forKey: Keys.proOCRLanguagesText) ?? "zh-Hans,en-US"
     }
 
     func shortcutsByAction() -> [AppAction: AppShortcut] {
         [
             .toggleDrawer: toggleDrawerShortcut,
-            .screenshotOCR: screenshotOCRShortcut,
         ]
+    }
+
+    private static func migratedToggleDrawerShortcut(_ shortcut: AppShortcut) -> AppShortcut {
+        shortcut == .internalLegacyDefaultToggleDrawer ? .defaultToggleDrawer : shortcut
+    }
+
+    private static func migratedVisualTheme(_ rawValue: String) -> AppVisualTheme {
+        if let theme = AppVisualTheme(rawValue: rawValue) {
+            return theme
+        }
+
+        switch rawValue {
+        case "light":
+            return .glassDay
+        default:
+            return .glassNight
+        }
+    }
+
+    private static func migratedTranslationLanguage(displayName: String?) -> TranslationLanguage? {
+        guard let displayName else { return nil }
+        return TranslationLanguage.targetChoices.first { $0.displayName == displayName }
     }
 
     private func persistShortcut(_ shortcut: AppShortcut, action: AppAction) {
@@ -199,6 +254,12 @@ final class SettingsStore: ObservableObject {
         )
     }
 
+    var hasConfiguredAITranslation: Bool {
+        !proAIAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            !proAIBaseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            !proAIModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     private enum Keys {
         static let visualTheme = "visual_theme"
         static let drawerEdge = "drawer_edge"
@@ -219,11 +280,14 @@ final class SettingsStore: ObservableObject {
         static let ignoredAppListText = "ignored_app_list_text"
         static let ignoredFileExtensionsText = "ignored_file_extensions_text"
         static let proEnabled = "pro_enabled"
+        static let autoOCRImagesEnabled = "auto_ocr_images_enabled"
         static let proAIEnabled = "pro_ai_enabled"
         static let proAIBaseURL = "pro_ai_base_url"
         static let proAIAPIKey = "pro_ai_api_key"
         static let proAIModel = "pro_ai_model"
         static let proVocabularyEnabled = "pro_vocabulary_enabled"
+        static let proTranslationSourceLanguage = "pro_translation_source_language"
+        static let proTranslationTarget = "pro_translation_target"
         static let proTranslationTargetLanguage = "pro_translation_target_language"
         static let proOCRLanguagesText = "pro_ocr_languages_text"
     }

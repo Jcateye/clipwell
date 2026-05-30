@@ -7,14 +7,16 @@ final class DrawerWindowController {
     private let monitor: ClipboardMonitorService
     private let settings: SettingsStore
     private let onPaste: @MainActor (ClipItem) -> Void
+    private let onOpenSettings: @MainActor () -> Void
     private var panel: DrawerPanel?
     private var mouseMonitor: Any?
     private var cancellables: Set<AnyCancellable> = []
 
-    init(monitor: ClipboardMonitorService, settings: SettingsStore, onPaste: @MainActor @escaping (ClipItem) -> Void) {
+    init(monitor: ClipboardMonitorService, settings: SettingsStore, onPaste: @MainActor @escaping (ClipItem) -> Void, onOpenSettings: @MainActor @escaping () -> Void) {
         self.monitor = monitor
         self.settings = settings
         self.onPaste = onPaste
+        self.onOpenSettings = onOpenSettings
 
         settings.$drawerEdge.sink { [weak self] _ in self?.applyFrame(animated: false) }.store(in: &cancellables)
         settings.$drawerWidth.sink { [weak self] _ in self?.applyFrame(animated: false) }.store(in: &cancellables)
@@ -65,15 +67,28 @@ final class DrawerWindowController {
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isReleasedWhenClosed = false
-        panel.backgroundColor = .windowBackgroundColor
+        panel.backgroundColor = .clear
+        panel.isOpaque = false
         panel.hasShadow = true
         panel.onEscape = { [weak self] in self?.close() }
-        panel.contentView = NSHostingView(rootView: DrawerView(monitor: monitor, settings: settings) { [weak self] clip in
-            self?.onPaste(clip)
-            if self?.settings.autoCloseDrawerEnabled == true {
-                self?.close()
+        panel.contentView = NSHostingView(rootView: DrawerView(
+            monitor: monitor,
+            settings: settings,
+            onPaste: { [weak self] clip in
+                guard let self else { return }
+                if settings.autoCloseDrawerEnabled {
+                    close()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + settings.drawerAnimationSpeed.duration + 0.04) { [weak self] in
+                        self?.onPaste(clip)
+                    }
+                } else {
+                    onPaste(clip)
+                }
+            },
+            onOpenSettings: { [weak self] in
+                self?.onOpenSettings()
             }
-        })
+        ))
         self.panel = panel
         return panel
     }

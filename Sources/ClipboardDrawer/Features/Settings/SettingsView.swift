@@ -27,7 +27,7 @@ struct SettingsView: View {
 
     var body: some View {
         ZStack {
-            TechBackground()
+            TechBackground(theme: settings.visualTheme)
             VStack(spacing: 18) {
                 header
                 tabSwitcher
@@ -40,6 +40,9 @@ struct SettingsView: View {
             .padding(24)
         }
         .frame(width: 620, height: 460)
+        .background(TechTheme.palette(for: settings.visualTheme).background)
+        .preferredColorScheme(settings.visualTheme.preferredColorScheme)
+        .id(settings.visualTheme)
     }
 
     private var header: some View {
@@ -80,7 +83,7 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .background {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
                             .fill(selectedTab == tab ? TechTheme.cyan : Color.clear)
                     }
                 }
@@ -88,7 +91,7 @@ struct SettingsView: View {
             }
         }
         .padding(5)
-        .techCard(cornerRadius: 16)
+        .techCard(cornerRadius: 8)
     }
 
     @ViewBuilder
@@ -135,18 +138,12 @@ struct SettingsView: View {
                 title: "Theme",
                 subtitle: settings.visualTheme.subtitle,
                 trailing: AnyView(
-                    Picker("", selection: $settings.visualTheme) {
-                        ForEach(AppVisualTheme.allCases) { theme in
-                            Text(theme.displayName).tag(theme)
-                        }
-                    }
-                    .labelsHidden()
-                    .frame(width: 150)
+                    ThemeModePicker(selection: $settings.visualTheme)
                 )
             )
         }
         .padding(16)
-        .techCard(cornerRadius: 20)
+        .techCard(cornerRadius: 10)
     }
 
     private var drawerTab: some View {
@@ -194,7 +191,7 @@ struct SettingsView: View {
             shortcutSection
         }
         .padding(16)
-        .techCard(cornerRadius: 20)
+        .techCard(cornerRadius: 10)
     }
 
     private var previewSection: some View {
@@ -230,13 +227,6 @@ struct SettingsView: View {
                 current: settings.toggleDrawerShortcut
             )
 
-            shortcutRow(
-                action: .screenshotOCR,
-                title: "Screenshot OCR shortcut",
-                subtitle: "Global trigger for interactive screenshot text capture",
-                current: settings.screenshotOCRShortcut
-            )
-
             if let action = recordingAction {
                 ShortcutRecorderView(shortcut: $pendingShortcut) {
                     recordingAction = nil
@@ -251,7 +241,7 @@ struct SettingsView: View {
                         .font(TechTheme.monoFont)
                         .foregroundStyle(TechTheme.cyan)
                 }
-                .techCard(selected: true, cornerRadius: 14)
+                .techCard(selected: true, cornerRadius: 7)
             }
 
             if let conflictMessage {
@@ -275,13 +265,17 @@ struct SettingsView: View {
     private var clipboardTab: some View {
         VStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 10) {
-                HStack {
+                HStack(alignment: .center, spacing: 14) {
                     labelBlock("History depth", "Maximum local records before pruning")
                     Spacer()
-                    statusBadge("\(settings.historyMaxCount)")
+                    HStack(spacing: 8) {
+                        statusBadge("\(settings.historyMaxCount)")
+                            .frame(minWidth: 46)
+                        Stepper("", value: $settings.historyMaxCount, in: 50...5000, step: 50)
+                            .labelsHidden()
+                            .fixedSize()
+                    }
                 }
-                Stepper("", value: $settings.historyMaxCount, in: 50...5000, step: 50)
-                    .labelsHidden()
             }
 
             settingsRow(title: "Deduplicate", subtitle: "Skip consecutive identical captures.", trailing: AnyView(Toggle("", isOn: $settings.dedupConsecutiveEnabled).toggleStyle(.switch).labelsHidden()))
@@ -296,9 +290,9 @@ struct SettingsView: View {
                     .frame(height: 92)
                     .scrollContentBackground(.hidden)
                     .background(TechTheme.background.opacity(0.45))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: 6)
                             .stroke(TechTheme.line.opacity(0.8), lineWidth: 0.8)
                     }
             }
@@ -311,9 +305,9 @@ struct SettingsView: View {
                     .frame(height: 58)
                     .scrollContentBackground(.hidden)
                     .background(TechTheme.background.opacity(0.45))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: 6)
                             .stroke(TechTheme.line.opacity(0.8), lineWidth: 0.8)
                     }
             }
@@ -322,35 +316,8 @@ struct SettingsView: View {
                 .overlay(TechTheme.line)
 
             settingsRow(
-                title: "Pro OCR",
-                subtitle: "Enable local image OCR and screenshot OCR actions.",
-                trailing: AnyView(
-                    Toggle("", isOn: $settings.proEnabled)
-                        .toggleStyle(.switch)
-                        .labelsHidden()
-                )
-            )
-
-            settingsRow(
-                title: "Vocabulary",
-                subtitle: "Enable local add-to-vocabulary action for text clips.",
-                trailing: AnyView(
-                    HStack(spacing: 10) {
-                        Button("Open") {
-                            openVocabulary()
-                        }
-                        .buttonStyle(TechSecondaryButtonStyle())
-
-                        Toggle("", isOn: $settings.proVocabularyEnabled)
-                            .toggleStyle(.switch)
-                            .labelsHidden()
-                    }
-                )
-            )
-
-            settingsRow(
-                title: "Pro AI",
-                subtitle: "Enable AI translate, rewrite, and summarize actions for text clips.",
+                title: "Translation",
+                subtitle: "Use macOS Translation by default, or AI when an API key is configured.",
                 trailing: AnyView(
                     Toggle("", isOn: $settings.proAIEnabled)
                         .toggleStyle(.switch)
@@ -358,62 +325,60 @@ struct SettingsView: View {
                 )
             )
 
-            VStack(alignment: .leading, spacing: 8) {
-                labelBlock("Translation target", "Language name for the Translate action, for example: English, Chinese, Japanese")
-                TextField("English", text: $settings.proTranslationTargetLanguage)
-                    .textFieldStyle(.plain)
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(TechTheme.text)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(TechTheme.background.opacity(0.45), in: RoundedRectangle(cornerRadius: 12))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(TechTheme.line.opacity(0.8), lineWidth: 0.8)
-                    }
+            HStack(spacing: 10) {
+                translationPicker(
+                    title: "Source",
+                    selection: $settings.proTranslationSourceLanguage,
+                    choices: TranslationLanguage.allCases
+                )
+                translationPicker(
+                    title: "Target",
+                    selection: $settings.proTranslationTarget,
+                    choices: TranslationLanguage.targetChoices
+                )
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                labelBlock("AI base URL", "OpenAI-compatible endpoint; recommended local LiteLLM URL")
+                labelBlock("AI base URL", "OpenAI-compatible endpoint URL")
                 TextField("http://127.0.0.1:4000/v1", text: $settings.proAIBaseURL)
                     .textFieldStyle(.plain)
                     .font(.system(.body, design: .monospaced))
                     .foregroundStyle(TechTheme.text)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
-                    .background(TechTheme.background.opacity(0.45), in: RoundedRectangle(cornerRadius: 12))
+                    .background(TechTheme.background.opacity(0.45), in: RoundedRectangle(cornerRadius: 6))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: 6)
                             .stroke(TechTheme.line.opacity(0.8), lineWidth: 0.8)
                     }
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                labelBlock("AI model", "LiteLLM short name or any OpenAI-compatible model id")
+                labelBlock("AI model", "OpenAI-compatible model identifier")
                 TextField("gpt-5.4-mini", text: $settings.proAIModel)
                     .textFieldStyle(.plain)
                     .font(.system(.body, design: .monospaced))
                     .foregroundStyle(TechTheme.text)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
-                    .background(TechTheme.background.opacity(0.45), in: RoundedRectangle(cornerRadius: 12))
+                    .background(TechTheme.background.opacity(0.45), in: RoundedRectangle(cornerRadius: 6))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: 6)
                             .stroke(TechTheme.line.opacity(0.8), lineWidth: 0.8)
                     }
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                labelBlock("AI API key", "LiteLLM virtual key or local master key; leave empty only if your endpoint allows it")
+                labelBlock("AI API key", "API key for your OpenAI-compatible endpoint")
                 SecureField("sk-...", text: $settings.proAIAPIKey)
                     .textFieldStyle(.plain)
                     .font(.system(.body, design: .monospaced))
                     .foregroundStyle(TechTheme.text)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
-                    .background(TechTheme.background.opacity(0.45), in: RoundedRectangle(cornerRadius: 12))
+                    .background(TechTheme.background.opacity(0.45), in: RoundedRectangle(cornerRadius: 6))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: 6)
                             .stroke(TechTheme.line.opacity(0.8), lineWidth: 0.8)
                     }
             }
@@ -430,23 +395,9 @@ struct SettingsView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                labelBlock("OCR languages", "Comma separated Vision language codes; example: zh-Hans, en-US")
-                TextEditor(text: $settings.proOCRLanguagesText)
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(TechTheme.text)
-                    .frame(height: 58)
-                    .scrollContentBackground(.hidden)
-                    .background(TechTheme.background.opacity(0.45))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(TechTheme.line.opacity(0.8), lineWidth: 0.8)
-                    }
-            }
         }
         .padding(16)
-        .techCard(cornerRadius: 20)
+        .techCard(cornerRadius: 10)
     }
 
     private func settingsRow(title: String, subtitle: String, trailing: AnyView) -> some View {
@@ -456,10 +407,31 @@ struct SettingsView: View {
             trailing
         }
         .padding(12)
-        .background(TechTheme.background.opacity(0.28), in: RoundedRectangle(cornerRadius: 14))
+        .background(TechTheme.background.opacity(0.28), in: RoundedRectangle(cornerRadius: 7))
         .overlay {
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: 7)
                 .stroke(TechTheme.line.opacity(0.5), lineWidth: 0.7)
+        }
+    }
+
+    private func translationPicker(title: String, selection: Binding<TranslationLanguage>, choices: [TranslationLanguage]) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(title.uppercased())
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(TechTheme.muted)
+            Picker("", selection: selection) {
+                ForEach(choices) { language in
+                    Text(language.displayName).tag(language)
+                }
+            }
+            .labelsHidden()
+            .frame(maxWidth: .infinity)
+        }
+        .padding(10)
+        .background(TechTheme.background.opacity(0.34), in: RoundedRectangle(cornerRadius: 6))
+        .overlay {
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(TechTheme.line.opacity(0.72), lineWidth: 0.8)
         }
     }
 
@@ -572,17 +544,61 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     }
 }
 
+private struct ThemeModePicker: View {
+    @Binding var selection: AppVisualTheme
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(AppVisualTheme.allCases) { theme in
+                Button {
+                    withAnimation(.snappy(duration: 0.18)) {
+                        selection = theme
+                    }
+                } label: {
+                    Image(systemName: theme.symbol)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(selection == theme ? TechTheme.onAccent : TechTheme.muted)
+                        .frame(width: 34, height: 28)
+                        .background {
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(selection == theme ? TechTheme.cyan : Color.clear)
+                        }
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(theme.displayName)
+            }
+        }
+        .padding(4)
+        .background {
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(TechTheme.surface.opacity(TechTheme.palette.surfaceOpacity))
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .stroke(TechTheme.line.opacity(0.7), lineWidth: 0.8)
+                }
+        }
+    }
+}
+
 struct TechSecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(TechTheme.labelFont)
+            .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(TechTheme.cyan)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(TechTheme.elevated.opacity(configuration.isPressed ? 0.7 : 0.95), in: Capsule())
+            .labelStyle(.titleAndIcon)
+            .lineLimit(1)
+            .minimumScaleFactor(0.78)
+            .padding(.horizontal, 10)
+            .frame(height: 32)
+            .background(TechTheme.elevated.opacity(configuration.isPressed ? 0.68 : 0.88), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
             .overlay {
-                Capsule()
-                    .stroke(TechTheme.lineBright, lineWidth: 0.8)
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .stroke(TechTheme.line.opacity(0.68), lineWidth: 0.8)
             }
     }
 }

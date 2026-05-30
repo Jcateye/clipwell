@@ -30,6 +30,7 @@ final class ClipboardMonitorService: ObservableObject {
     @Published var bannerMessage: String?
     @Published var proResultTitle: String?
     @Published var proResultText: String?
+    @Published var proResultClipID: ClipItem.ID?
     @Published var proBusyState: ProBusyKind?
 
     private let settings: SettingsStore
@@ -42,7 +43,10 @@ final class ClipboardMonitorService: ObservableObject {
     private var timer: Timer?
     private var lastChangeCount: Int
     private var lastCapturedHash: String?
+    private var uncapturableChangeCount: Int?
+    private var uncapturableRetryCount = 0
     private var cancellables: Set<AnyCancellable> = []
+    private let maxUncapturableRetries = 5
 
     init(
         settings: SettingsStore,
@@ -103,6 +107,7 @@ final class ClipboardMonitorService: ObservableObject {
         repository.clear()
         payloadStore.clearAll()
         lastCapturedHash = nil
+        resetUncapturableRetryState()
         refresh()
     }
 
@@ -119,6 +124,7 @@ final class ClipboardMonitorService: ObservableObject {
             payloadStore.remove(path: path)
         }
         lastCapturedHash = repository.latestClip()?.contentHash
+        resetUncapturableRetryState()
         refresh()
         bannerMessage = "Cleared \(filter.displayName.lowercased()) clips."
     }
@@ -149,7 +155,7 @@ final class ClipboardMonitorService: ObservableObject {
                 userPrompt: nil
             ))
 
-            handleProActionResult(result, title: "Image OCR ready", emptyMessage: "No text found in image.")
+            handleProActionResult(result, title: "Text", emptyMessage: "No text found in image.", clipID: clip.id)
         } catch ProFeatureError.locked {
             bannerMessage = "Pro OCR is locked."
         } catch {
@@ -222,14 +228,30 @@ final class ClipboardMonitorService: ObservableObject {
                 userPrompt: nil
             ))
 
-            handleProActionResult(result, title: "AI Translate ready", emptyMessage: "No translated text returned.")
+            handleProActionResult(result, title: "Translation", emptyMessage: "No translated text returned.", clipID: clip.id)
         } catch ProFeatureError.locked {
             bannerMessage = "Pro AI Translate is locked."
         } catch {
             proResultTitle = nil
             proResultText = nil
+            proResultClipID = nil
             bannerMessage = "AI Translate failed: \(error.localizedDescription)"
         }
+    }
+
+    func publishSystemTranslation(_ text: String, for clip: ClipItem) {
+        let normalizedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        proResultTitle = "Translation"
+        proResultText = normalizedText
+        proResultClipID = clip.id
+        bannerMessage = normalizedText.isEmpty ? "No translated text returned." : nil
+    }
+
+    func reportSystemTranslationFailure(_ message: String) {
+        proResultTitle = nil
+        proResultText = nil
+        proResultClipID = nil
+        bannerMessage = "System translation failed: \(message)"
     }
 
     func runAIRewrite(for clip: ClipItem) async {
@@ -256,12 +278,13 @@ final class ClipboardMonitorService: ObservableObject {
                 userPrompt: nil
             ))
 
-            handleProActionResult(result, title: "AI Rewrite ready", emptyMessage: "No rewritten text returned.")
+            handleProActionResult(result, title: "AI Rewrite ready", emptyMessage: "No rewritten text returned.", clipID: clip.id)
         } catch ProFeatureError.locked {
             bannerMessage = "Pro AI Rewrite is locked."
         } catch {
             proResultTitle = nil
             proResultText = nil
+            proResultClipID = nil
             bannerMessage = "AI Rewrite failed: \(error.localizedDescription)"
         }
     }
@@ -290,12 +313,13 @@ final class ClipboardMonitorService: ObservableObject {
                 userPrompt: nil
             ))
 
-            handleProActionResult(result, title: "AI Summary ready", emptyMessage: "No summary text returned.")
+            handleProActionResult(result, title: "AI Summary ready", emptyMessage: "No summary text returned.", clipID: clip.id)
         } catch ProFeatureError.locked {
             bannerMessage = "Pro AI Summary is locked."
         } catch {
             proResultTitle = nil
             proResultText = nil
+            proResultClipID = nil
             bannerMessage = "AI Summary failed: \(error.localizedDescription)"
         }
     }
@@ -308,6 +332,7 @@ final class ClipboardMonitorService: ObservableObject {
 
         do {
             try proFeatureGate.require(.screenshotOCR)
+            let sourceAppName = NSWorkspace.shared.frontmostApplication?.localizedName
             let result = try await proActionEngine.run([
                 .screenshotOCR
             ], context: ProActionContext(
@@ -315,11 +340,12 @@ final class ClipboardMonitorService: ObservableObject {
                 clipboardItem: nil,
                 inputText: nil,
                 inputImageData: nil,
-                sourceAppName: NSWorkspace.shared.frontmostApplication?.localizedName,
+                sourceAppName: sourceAppName,
                 userPrompt: nil
             ))
 
-            handleProActionResult(result, title: "Screenshot OCR ready", emptyMessage: "No text found in screenshot.")
+            let clipID = try result.imageData.map { try saveScreenshotClip(imageData: $0, sourceAppName: sourceAppName) }
+            handleProActionResult(result, title: "Screenshot OCR ready", emptyMessage: "No text found in screenshot.", clipID: clipID)
         } catch ProFeatureError.locked {
             bannerMessage = "Pro screenshot OCR is locked."
         } catch ScreenshotError.cancelled {
@@ -336,24 +362,24 @@ final class ClipboardMonitorService: ObservableObject {
 
         switch clip.type {
         case .text:
-            didWritePasteboard = pasteboard.setString(clip.plainText ?? "", forType: .string)
+            didWritePasteboard = writePlainTextFallback(clip.plainText, to: pasteboard)
         case .rtf:
+            didWritePasteboard = writePlainTextFallback(clip.plainText, to: pasteboard)
             if let data = payloadStore.read(path: clip.payloadPath) {
-                didWritePasteboard = pasteboard.setData(data, forType: NSPasteboard.PasteboardType("public.rtf"))
-                if let plainText = clip.plainText {
-                    pasteboard.setString(plainText, forType: .string)
-                }
+                didWritePasteboard = pasteboard.setData(data, forType: NSPasteboard.PasteboardType("public.rtf")) || didWritePasteboard
             }
         case .html:
+            didWritePasteboard = writePlainTextFallback(clip.plainText, to: pasteboard)
             if let data = payloadStore.read(path: clip.payloadPath) {
-                didWritePasteboard = pasteboard.setData(data, forType: NSPasteboard.PasteboardType("public.html"))
-                if let plainText = clip.plainText {
-                    pasteboard.setString(plainText, forType: .string)
-                }
+                didWritePasteboard = pasteboard.setData(data, forType: NSPasteboard.PasteboardType("public.html")) || didWritePasteboard
             }
         case .media:
             if let url = clip.documentURL {
-                didWritePasteboard = pasteboard.writeObjects([url as NSURL])
+                if clip.isImageDocument {
+                    didWritePasteboard = writeImageFile(url, to: pasteboard)
+                } else {
+                    didWritePasteboard = pasteboard.writeObjects([url as NSURL])
+                }
             } else if let data = payloadStore.read(path: clip.payloadPath) {
                 didWritePasteboard = pasteboard.setData(data, forType: .png)
                 if let image = NSImage(data: data) {
@@ -362,12 +388,15 @@ final class ClipboardMonitorService: ObservableObject {
             }
         case .document:
             if let url = clip.documentURL {
-                didWritePasteboard = pasteboard.writeObjects([url as NSURL])
+                let didWriteFile = pasteboard.writeObjects([url as NSURL])
+                let didWriteText = writePlainTextFallback(url.path, to: pasteboard)
+                didWritePasteboard = didWriteFile || didWriteText
             }
         }
 
         lastChangeCount = pasteboard.changeCount
         lastCapturedHash = clip.contentHash
+        resetUncapturableRetryState()
         if didWritePasteboard {
             promotePastedClipIfNeeded(clip)
         }
@@ -379,22 +408,26 @@ final class ClipboardMonitorService: ObservableObject {
 
     private func poll() {
         let pasteboard = NSPasteboard.general
-        guard !settings.monitoringPaused, pasteboard.changeCount != lastChangeCount else {
+        let observedChangeCount = pasteboard.changeCount
+        guard !settings.monitoringPaused, observedChangeCount != lastChangeCount else {
             return
         }
-        lastChangeCount = pasteboard.changeCount
 
         let frontmostApp = NSWorkspace.shared.frontmostApplication
         guard !settings.shouldIgnore(appName: frontmostApp?.localizedName, bundleIdentifier: frontmostApp?.bundleIdentifier) else {
             AppLog.clipboard.debug("Ignored clipboard capture from \(frontmostApp?.localizedName ?? "unknown app")")
+            markChangeCountConsumed(observedChangeCount)
             return
         }
 
         guard let parsed = parser.parse(pasteboard, ignoredFileExtensions: settings.ignoredFileExtensions) else {
+            markChangeCountUncapturableAfterRetry(observedChangeCount)
             return
         }
 
+        resetUncapturableRetryState()
         if settings.dedupConsecutiveEnabled, parsed.contentHash == lastCapturedHash {
+            markChangeCountConsumed(observedChangeCount)
             return
         }
 
@@ -406,6 +439,7 @@ final class ClipboardMonitorService: ObservableObject {
             } catch {
                 AppLog.clipboard.error("Payload write failed: \(error.localizedDescription)")
                 bannerMessage = "Failed to save clipboard payload."
+                markChangeCountConsumed(observedChangeCount)
                 return
             }
         }
@@ -427,14 +461,30 @@ final class ClipboardMonitorService: ObservableObject {
             try repository.insert(clip)
             pruneHistory(maxCount: settings.historyMaxCount)
             lastCapturedHash = parsed.contentHash
+            markChangeCountConsumed(observedChangeCount)
             refresh()
+            runAutomaticOCRIfNeeded(for: clip)
         } catch {
             AppLog.clipboard.error("Clip insert failed: \(error.localizedDescription)")
             bannerMessage = "Failed to save clipboard item."
+            markChangeCountConsumed(observedChangeCount)
         }
     }
 
-    func copyProResultToPasteboard() {
+    private func runAutomaticOCRIfNeeded(for clip: ClipItem) {
+        guard settings.autoOCRImagesEnabled,
+              settings.proEnabled,
+              clip.type == .media,
+              clip.documentURL == nil else {
+            return
+        }
+
+        Task { @MainActor in
+            await runImageOCR(for: clip)
+        }
+    }
+
+    func copyProResultToPasteboard(derivedFrom clip: ClipItem? = nil) {
         guard let text = proResultText, !text.isEmpty else {
             bannerMessage = "No result to copy."
             return
@@ -444,24 +494,11 @@ final class ClipboardMonitorService: ObservableObject {
         pasteboard.setString(text, forType: .string)
         lastChangeCount = pasteboard.changeCount
         lastCapturedHash = nil
-        bannerMessage = "Result copied."
+        resetUncapturableRetryState()
+        saveProResultToHistory(derivedFrom: clip, successMessage: "Result copied and saved.")
     }
 
-    func pasteProResult() {
-        guard let text = proResultText, !text.isEmpty else {
-            bannerMessage = "No result to paste."
-            return
-        }
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
-        lastChangeCount = pasteboard.changeCount
-        lastCapturedHash = nil
-        sendPasteKeystroke()
-        bannerMessage = "Result pasted."
-    }
-
-    func saveProResultToHistory(derivedFrom clip: ClipItem?) {
+    func saveProResultToHistory(derivedFrom clip: ClipItem?, successMessage: String = "Result saved as derived clip.") {
         guard let text = proResultText?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
             bannerMessage = "No result to save."
             return
@@ -484,17 +521,36 @@ final class ClipboardMonitorService: ObservableObject {
             try repository.insert(derivedClip)
             pruneHistory(maxCount: settings.historyMaxCount)
             refresh()
-            bannerMessage = "Result saved as derived clip."
+            bannerMessage = successMessage
         } catch {
             AppLog.clipboard.error("Saving derived pro result failed: \(error.localizedDescription)")
             bannerMessage = "Failed to save result."
         }
     }
 
-    private func handleProActionResult(_ result: ProActionResult, title: String, emptyMessage: String) {
+    func updateTextClip(_ clip: ClipItem, text: String) {
+        guard clip.type == .text else {
+            bannerMessage = "Only text clips can be edited."
+            return
+        }
+
+        do {
+            try repository.updatePlainText(id: clip.id, text: text, contentHash: parser.hashText(text))
+            lastCapturedHash = repository.latestClip()?.contentHash
+            resetUncapturableRetryState()
+            refresh()
+            bannerMessage = "Text clip saved."
+        } catch {
+            AppLog.clipboard.error("Updating text clip failed: \(error.localizedDescription)")
+            bannerMessage = "Failed to save text clip."
+        }
+    }
+
+    private func handleProActionResult(_ result: ProActionResult, title: String, emptyMessage: String, clipID: ClipItem.ID?) {
         let normalizedText = result.text?.trimmingCharacters(in: .whitespacesAndNewlines)
         proResultTitle = title
         proResultText = normalizedText
+        proResultClipID = clipID
 
         guard let text = normalizedText, !text.isEmpty else {
             bannerMessage = emptyMessage
@@ -507,6 +563,7 @@ final class ClipboardMonitorService: ObservableObject {
             pasteboard.setString(text, forType: .string)
             lastChangeCount = pasteboard.changeCount
             lastCapturedHash = nil
+            resetUncapturableRetryState()
         }
 
         if result.shouldSaveToHistory {
@@ -535,7 +592,32 @@ final class ClipboardMonitorService: ObservableObject {
             sendPasteKeystroke()
         }
 
-        bannerMessage = "\(title) · result ready"
+        bannerMessage = nil
+    }
+
+    private func saveScreenshotClip(imageData: Data, sourceAppName: String?) throws -> ClipItem.ID {
+        let id = UUID().uuidString
+        let payloadPath = try payloadStore.write(data: imageData, id: id, fileExtension: "png")
+        let contentHash = parser.hashData(imageData)
+        let clip = ClipItem(
+            id: id,
+            createdAt: Date(),
+            type: .media,
+            plainText: nil,
+            payloadPath: payloadPath,
+            sourceApp: sourceAppName ?? "Screenshot",
+            isPinned: false,
+            contentHash: contentHash,
+            origin: .original,
+            derivedFromClipID: nil
+        )
+
+        try repository.insert(clip)
+        pruneHistory(maxCount: settings.historyMaxCount)
+        lastCapturedHash = contentHash
+        resetUncapturableRetryState()
+        refresh()
+        return id
     }
 
     private func sendPasteKeystroke() {
@@ -548,12 +630,62 @@ final class ClipboardMonitorService: ObservableObject {
         keyUp?.post(tap: .cghidEventTap)
     }
 
+    private func writePlainTextFallback(_ text: String?, to pasteboard: NSPasteboard) -> Bool {
+        guard let text, !text.isEmpty else {
+            return false
+        }
+        return pasteboard.setString(text, forType: .string)
+    }
+
+    private func writeImageFile(_ url: URL, to pasteboard: NSPasteboard) -> Bool {
+        guard let image = NSImage(contentsOf: url) else {
+            return pasteboard.writeObjects([url as NSURL])
+        }
+
+        var didWrite = false
+        if let pngData = pngData(from: image) {
+            didWrite = pasteboard.setData(pngData, forType: .png)
+        }
+        return pasteboard.writeObjects([image]) || didWrite
+    }
+
+    private func pngData(from image: NSImage) -> Data? {
+        guard let tiff = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiff) else {
+            return nil
+        }
+        return bitmap.representation(using: .png, properties: [:])
+    }
+
     private func pruneHistory(maxCount: Int) {
         let removedPayloadPaths = repository.payloadPathsBeyondLimit(maxCount: maxCount)
         repository.prune(maxCount: maxCount)
         for path in removedPayloadPaths {
             payloadStore.remove(path: path)
         }
+    }
+
+    private func markChangeCountConsumed(_ changeCount: Int) {
+        lastChangeCount = changeCount
+        resetUncapturableRetryState()
+    }
+
+    private func markChangeCountUncapturableAfterRetry(_ changeCount: Int) {
+        if uncapturableChangeCount == changeCount {
+            uncapturableRetryCount += 1
+        } else {
+            uncapturableChangeCount = changeCount
+            uncapturableRetryCount = 1
+        }
+
+        if uncapturableRetryCount >= maxUncapturableRetries {
+            markChangeCountConsumed(changeCount)
+        }
+    }
+
+    private func resetUncapturableRetryState() {
+        uncapturableChangeCount = nil
+        uncapturableRetryCount = 0
     }
 
     private func promotePastedClipIfNeeded(_ clip: ClipItem) {

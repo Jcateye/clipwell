@@ -82,6 +82,19 @@ final class ClipRepository {
         fetch(limit: 1).first
     }
 
+    func updatePlainText(id: ClipItem.ID, text: String, contentHash: String) throws {
+        let sql = """
+        UPDATE clips
+        SET plain_text = ?, content_hash = ?
+        WHERE id = ? AND type = 'text'
+        """
+        try execute(sql) { statement in
+            sqlite3_bind_text(statement, 1, text, -1, SQLITE_TRANSIENT)
+            sqlite3_bind_text(statement, 2, contentHash, -1, SQLITE_TRANSIENT)
+            sqlite3_bind_text(statement, 3, id, -1, SQLITE_TRANSIENT)
+        }
+    }
+
     func clear() {
         try? execute("DELETE FROM clips") { _ in }
     }

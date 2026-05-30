@@ -17,11 +17,13 @@ struct ThemePalette {
     let muted: Color
     let gridOpacity: Double
     let glowOpacity: Double
+    let surfaceOpacity: Double
+    let elevatedOpacity: Double
 }
 
 enum TechTheme {
     static var activeTheme: AppVisualTheme {
-        AppVisualTheme(rawValue: UserDefaults.standard.string(forKey: "visual_theme") ?? "") ?? .graphite
+        AppVisualTheme(rawValue: UserDefaults.standard.string(forKey: "visual_theme") ?? "") ?? .glassNight
     }
 
     static var palette: ThemePalette {
@@ -30,100 +32,47 @@ enum TechTheme {
 
     static func palette(for theme: AppVisualTheme) -> ThemePalette {
         switch theme {
-        case .light:
+        case .glassDay:
             ThemePalette(
-                background: Color(hex: 0xF8F1E7),
-                backgroundSecondary: Color(hex: 0xF1E3D3),
-                backgroundTertiary: Color(hex: 0xFFF9F0),
-                surface: Color(hex: 0xFFF8EE),
-                elevated: Color(hex: 0xEBD8C5),
-                line: Color(hex: 0xD8BFA7),
-                lineBright: Color(hex: 0xA7673F).opacity(0.34),
-                accent: Color(hex: 0x8B4F2F),
-                accentSecondary: Color(hex: 0xC99068),
+                background: Color(hex: 0xF7F4EE),
+                backgroundSecondary: Color(hex: 0xECE4D7),
+                backgroundTertiary: Color(hex: 0xFFFCF6),
+                surface: Color(hex: 0xFFFFFF),
+                elevated: Color(hex: 0xF2ECE3),
+                line: Color(hex: 0xD8CDC0),
+                lineBright: Color(hex: 0x617070).opacity(0.36),
+                accent: Color(hex: 0x526565),
+                accentSecondary: Color(hex: 0x9B8065),
                 onAccent: Color(hex: 0xFFFFFF),
-                success: Color(hex: 0x4F6530),
-                warning: Color(hex: 0x914D22),
-                text: Color(hex: 0x2E2118),
-                muted: Color(hex: 0x7E6A5B),
-                gridOpacity: 0.022,
-                glowOpacity: 0.12
+                success: Color(hex: 0x607A61),
+                warning: Color(hex: 0x9B6C42),
+                text: Color(hex: 0x20201D),
+                muted: Color(hex: 0x787068),
+                gridOpacity: 0.008,
+                glowOpacity: 0.04,
+                surfaceOpacity: 0.58,
+                elevatedOpacity: 0.66
             )
-        case .graphite:
+        case .glassNight:
             ThemePalette(
-                background: Color(hex: 0x1B1C1F),
-                backgroundSecondary: Color(hex: 0x24262A),
-                backgroundTertiary: Color(hex: 0x202226),
-                surface: Color(hex: 0x2A2C31),
-                elevated: Color(hex: 0x34373D),
-                line: Color(hex: 0x464A52),
-                lineBright: Color(hex: 0xAEB4BE).opacity(0.3),
-                accent: Color(hex: 0xAEB4BE),
-                accentSecondary: Color(hex: 0x7E858F),
-                onAccent: Color(hex: 0x111316),
-                success: Color(hex: 0x9AAE9A),
-                warning: Color(hex: 0xC3A06D),
-                text: Color(hex: 0xF0F1F2),
-                muted: Color(hex: 0xA6ABB2),
-                gridOpacity: 0.014,
-                glowOpacity: 0.06
-            )
-        case .slate:
-            ThemePalette(
-                background: Color(hex: 0x131B24),
-                backgroundSecondary: Color(hex: 0x1B2835),
-                backgroundTertiary: Color(hex: 0x172331),
-                surface: Color(hex: 0x203040),
-                elevated: Color(hex: 0x2A3D50),
-                line: Color(hex: 0x3C5268),
-                lineBright: Color(hex: 0x91B3D6).opacity(0.34),
-                accent: Color(hex: 0x91B3D6),
-                accentSecondary: Color(hex: 0x6384A3),
-                onAccent: Color(hex: 0x101820),
-                success: Color(hex: 0x7FB3AA),
-                warning: Color(hex: 0xC6A77B),
-                text: Color(hex: 0xEEF4F9),
-                muted: Color(hex: 0x9FB0BF),
-                gridOpacity: 0.024,
-                glowOpacity: 0.1
-            )
-        case .warm:
-            ThemePalette(
-                background: Color(hex: 0x211812),
-                backgroundSecondary: Color(hex: 0x2E2118),
-                backgroundTertiary: Color(hex: 0x281C14),
-                surface: Color(hex: 0x38281D),
-                elevated: Color(hex: 0x463326),
-                line: Color(hex: 0x5B4434),
-                lineBright: Color(hex: 0xD6A874).opacity(0.34),
-                accent: Color(hex: 0xD6A874),
-                accentSecondary: Color(hex: 0xA97B50),
-                onAccent: Color(hex: 0x16100C),
-                success: Color(hex: 0xA7A36E),
-                warning: Color(hex: 0xE0A15E),
-                text: Color(hex: 0xF4ECE3),
-                muted: Color(hex: 0xB29D8B),
-                gridOpacity: 0.015,
-                glowOpacity: 0.08
-            )
-        case .tech:
-            ThemePalette(
-                background: Color(hex: 0x071018),
-                backgroundSecondary: Color(hex: 0x0B1B29),
-                backgroundTertiary: Color(hex: 0x10151F),
-                surface: Color(hex: 0x102130),
-                elevated: Color(hex: 0x152D42),
-                line: Color(hex: 0x24445D),
-                lineBright: Color(hex: 0x4ADDE8).opacity(0.36),
-                accent: Color(hex: 0x4ADDE8),
-                accentSecondary: Color(hex: 0x327EA8),
-                onAccent: Color(hex: 0x061015),
-                success: Color(hex: 0x78D7B4),
-                warning: Color(hex: 0xE2B86B),
-                text: Color(hex: 0xEAF7FA),
-                muted: Color(hex: 0x8FA8B8),
-                gridOpacity: 0.048,
-                glowOpacity: 0.18
+                background: Color(hex: 0x1F211F),
+                backgroundSecondary: Color(hex: 0x171918),
+                backgroundTertiary: Color(hex: 0x292B28),
+                surface: Color(hex: 0x2A2D2A),
+                elevated: Color(hex: 0x343731),
+                line: Color(hex: 0x50554E),
+                lineBright: Color(hex: 0xCAC4B8).opacity(0.3),
+                accent: Color(hex: 0xD8D2C6),
+                accentSecondary: Color(hex: 0xA68A6A),
+                onAccent: Color(hex: 0x151716),
+                success: Color(hex: 0x8DAA81),
+                warning: Color(hex: 0xC7965C),
+                text: Color(hex: 0xF3EFE8),
+                muted: Color(hex: 0xA7A299),
+                gridOpacity: 0.006,
+                glowOpacity: 0.035,
+                surfaceOpacity: 0.42,
+                elevatedOpacity: 0.56
             )
         }
     }
@@ -159,31 +108,29 @@ extension Color {
 }
 
 struct TechBackground: View {
+    var theme: AppVisualTheme = TechTheme.activeTheme
+
     var body: some View {
-        let palette = TechTheme.palette
+        let palette = TechTheme.palette(for: theme)
 
         ZStack {
+            palette.background
+
             LinearGradient(
-                colors: [
-                    palette.background,
-                    palette.backgroundSecondary,
-                    palette.backgroundTertiary
-                ],
+                colors: [palette.backgroundTertiary, palette.background, palette.backgroundSecondary],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
 
-            Circle()
-                .fill(palette.accentSecondary.opacity(palette.glowOpacity))
-                .blur(radius: 58)
-                .frame(width: 180, height: 180)
-                .offset(x: -150, y: -280)
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .opacity(theme == .glassDay ? 0.22 : 0.34)
 
-            Circle()
-                .fill(palette.accent.opacity(palette.glowOpacity * 0.75))
-                .blur(radius: 70)
-                .frame(width: 220, height: 220)
-                .offset(x: 160, y: 180)
+            LinearGradient(
+                colors: [palette.surface.opacity(theme == .glassDay ? 0.34 : 0.06), Color.clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
 
             GridOverlay()
                 .stroke(palette.accent.opacity(palette.gridOpacity), lineWidth: 0.8)
@@ -217,24 +164,28 @@ struct GridOverlay: Shape {
 
 struct TechCard: ViewModifier {
     var selected = false
-    var cornerRadius: CGFloat = 16
+    var cornerRadius: CGFloat = 8
 
     func body(content: Content) -> some View {
         content
             .background {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(selected ? TechTheme.elevated.opacity(0.92) : TechTheme.surface.opacity(0.78))
+                    .fill(.ultraThinMaterial)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(selected ? TechTheme.elevated.opacity(TechTheme.palette.elevatedOpacity) : TechTheme.surface.opacity(TechTheme.palette.surfaceOpacity))
+                    }
                     .overlay {
                         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                             .stroke(selected ? TechTheme.lineBright : TechTheme.line.opacity(0.75), lineWidth: selected ? 1.2 : 0.8)
                     }
-                    .shadow(color: selected ? TechTheme.cyan.opacity(0.14) : .black.opacity(0.22), radius: selected ? 16 : 8, y: 6)
+                    .shadow(color: .black.opacity(selected ? 0.18 : 0.1), radius: selected ? 18 : 10, y: selected ? 8 : 5)
             }
     }
 }
 
 extension View {
-    func techCard(selected: Bool = false, cornerRadius: CGFloat = 16) -> some View {
+    func techCard(selected: Bool = false, cornerRadius: CGFloat = 8) -> some View {
         modifier(TechCard(selected: selected, cornerRadius: cornerRadius))
     }
 }

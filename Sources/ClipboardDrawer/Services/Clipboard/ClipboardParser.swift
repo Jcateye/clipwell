@@ -131,6 +131,10 @@ final class ClipboardParser {
         hash(data: Data(text.utf8))
     }
 
+    func hashData(_ data: Data) -> String {
+        hash(data: data)
+    }
+
     private func hash(data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }

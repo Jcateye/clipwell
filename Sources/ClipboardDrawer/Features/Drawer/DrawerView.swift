@@ -4,15 +4,17 @@ struct DrawerView: View {
     @ObservedObject var monitor: ClipboardMonitorService
     @ObservedObject var settings: SettingsStore
     var onPaste: (ClipItem) -> Void
+    var onOpenSettings: () -> Void
     @State private var selectedClipID: ClipItem.ID?
     @State private var keyboardMonitor: Any?
     @State private var confirmingClearFilter = false
+    @State private var bannerDetailMessage: String?
 
     var body: some View {
         ZStack {
-            TechBackground()
+            TechBackground(theme: settings.visualTheme)
 
-            VStack(spacing: 14) {
+            VStack(spacing: 12) {
                 header
                 if let bannerMessage = monitor.bannerMessage, !bannerMessage.isEmpty {
                     bannerView(bannerMessage)
@@ -23,36 +25,30 @@ struct DrawerView: View {
                 if settings.previewEnabled {
                     ClipPreviewPane(
                         clip: selectedClip,
-                        proResultTitle: monitor.proResultTitle,
-                        proResultText: monitor.proResultText,
+                        proResultTitle: scopedProResultTitle,
+                        proResultText: scopedProResultText,
                         proBusyState: monitor.proBusyState,
+                        useConfiguredAITranslation: settings.proAIEnabled && settings.hasConfiguredAITranslation,
+                        translationSourceLanguage: settings.proTranslationSourceLanguage,
+                        translationTargetLanguage: settings.proTranslationTarget,
                         onPaste: onPaste,
                         onImageOCR: { clip in
                             Task { await monitor.runImageOCR(for: clip) }
                         },
-                        onAddToVocabulary: { clip in
-                            Task { await monitor.addToVocabulary(for: clip) }
-                        },
                         onAITranslate: { clip in
                             Task { await monitor.runAITranslate(for: clip) }
                         },
-                        onAIRewrite: { clip in
-                            Task { await monitor.runAIRewrite(for: clip) }
+                        onSystemTranslateResult: { clip, text in
+                            monitor.publishSystemTranslation(text, for: clip)
                         },
-                        onAISummary: { clip in
-                            Task { await monitor.runAISummary(for: clip) }
-                        },
-                        onScreenshotOCR: {
-                            Task { await monitor.runScreenshotOCR() }
+                        onSystemTranslateFailure: { message in
+                            monitor.reportSystemTranslationFailure(message)
                         },
                         onCopyProResult: {
-                            monitor.copyProResultToPasteboard()
+                            monitor.copyProResultToPasteboard(derivedFrom: selectedClip)
                         },
-                        onPasteProResult: {
-                            monitor.pasteProResult()
-                        },
-                        onSaveProResult: {
-                            monitor.saveProResultToHistory(derivedFrom: selectedClip)
+                        onSaveTextClip: { clip, text in
+                            monitor.updateTextClip(clip, text: text)
                         }
                     )
                         .frame(height: settings.previewHeight)
@@ -61,11 +57,14 @@ struct DrawerView: View {
                 shortcutButtons
                 footer
             }
-            .padding(18)
+            .padding(16)
         }
         .animation(.snappy(duration: 0.18), value: settings.previewEnabled)
         .animation(.snappy(duration: 0.18), value: settings.previewHeight)
-        .frame(minWidth: 320, idealWidth: settings.drawerWidth, maxWidth: 520, maxHeight: .infinity)
+        .frame(minWidth: 360, idealWidth: settings.drawerWidth, maxWidth: 600, maxHeight: .infinity)
+        .background(TechTheme.palette(for: settings.visualTheme).background)
+        .preferredColorScheme(settings.visualTheme.preferredColorScheme)
+        .id(settings.visualTheme)
         .alert("Clear \(monitor.filter.displayName) clips?", isPresented: $confirmingClearFilter) {
             Button("Cancel", role: .cancel) {}
             Button("Clear", role: .destructive) {
@@ -75,10 +74,33 @@ struct DrawerView: View {
         } message: {
             Text(clearFilterMessage)
         }
+        .alert("Message Detail", isPresented: Binding(
+            get: { bannerDetailMessage != nil },
+            set: { if !$0 { bannerDetailMessage = nil } }
+        )) {
+            Button("Copy") {
+                if let bannerDetailMessage {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(bannerDetailMessage, forType: .string)
+                }
+                bannerDetailMessage = nil
+            }
+            Button("OK", role: .cancel) {
+                bannerDetailMessage = nil
+            }
+        } message: {
+            Text(bannerDetailMessage ?? "")
+        }
         .onChange(of: monitor.clips) { _, clips in
             if selectedClipID == nil || !clips.contains(where: { $0.id == selectedClipID }) {
                 selectedClipID = clips.first?.id
             }
+        }
+        .onChange(of: monitor.proResultClipID) { _, id in
+            guard let id, monitor.clips.contains(where: { $0.id == id }) else {
+                return
+            }
+            selectedClipID = id
         }
         .onAppear {
             selectedClipID = selectedClipID ?? monitor.clips.first?.id
@@ -90,30 +112,55 @@ struct DrawerView: View {
     }
 
     private func bannerView(_ text: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: "sparkles.rectangle.stack")
-                .foregroundStyle(TechTheme.cyan)
-            Text(text)
-                .font(.system(size: 12.5, weight: .medium))
-                .foregroundStyle(TechTheme.text)
-                .lineLimit(2)
-            Spacer()
+        Button {
+            bannerDetailMessage = text
+        } label: {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: bannerIcon(for: text))
+                    .foregroundStyle(TechTheme.green)
+                    .padding(.top, 1)
+                Text(text)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(TechTheme.text)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+                Spacer()
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(TechTheme.muted)
+                    .padding(.top, 2)
+            }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .help("Click to view and copy full message")
         .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .techCard(selected: true, cornerRadius: 14)
+        .padding(.vertical, 9)
+        .techCard(selected: true, cornerRadius: 7)
+    }
+
+    private func bannerIcon(for text: String) -> String {
+        text.localizedCaseInsensitiveContains("translate") ? "character.bubble" : "checkmark.circle"
     }
 
     private var header: some View {
         HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("CLIPBOARD")
-                    .font(TechTheme.displayFont)
-                    .tracking(1.2)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("CLIPWELL")
+                    .font(.system(size: 20, weight: .heavy, design: .rounded))
+                    .tracking(1.5)
                     .foregroundStyle(TechTheme.text)
-                Text("\(monitor.clips.count) clips · ⌘1–⌘9 paste")
-                    .font(TechTheme.monoFont)
-                    .foregroundStyle(TechTheme.muted)
+                
+                HStack(spacing: 6) {
+                    Text("\(monitor.clips.count) clips")
+                    Text("•")
+                    Text("Local only")
+                    Text("•")
+                    Text("Private by design")
+                    Image(systemName: "checkmark.shield")
+                }
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(TechTheme.muted)
             }
 
             Spacer()
@@ -121,26 +168,38 @@ struct DrawerView: View {
             HStack(spacing: 6) {
                 Circle()
                     .fill(settings.monitoringPaused ? TechTheme.amber : TechTheme.green)
-                    .frame(width: 7, height: 7)
-                    .shadow(color: settings.monitoringPaused ? TechTheme.amber : TechTheme.green, radius: 5)
+                    .frame(width: 8, height: 8)
                 Text(settings.monitoringPaused ? "PAUSED" : "LIVE")
-                    .font(TechTheme.monoFont)
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(settings.monitoringPaused ? TechTheme.amber : TechTheme.green)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .techCard(cornerRadius: 999)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Capsule().stroke(settings.monitoringPaused ? TechTheme.amber.opacity(0.3) : TechTheme.green.opacity(0.3), lineWidth: 1))
+            
+            Button(action: onOpenSettings) {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 16))
+                    .foregroundStyle(TechTheme.muted)
+            }
+            .buttonStyle(.plain)
+            .padding(.leading, 8)
+            .help("Open Settings")
         }
     }
 
     private var searchBar: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(TechTheme.cyan)
+                .foregroundStyle(TechTheme.muted)
+                .font(.system(size: 16))
             TextField("Search clips", text: $monitor.searchText)
                 .textFieldStyle(.plain)
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(size: 15, weight: .regular))
                 .foregroundStyle(TechTheme.text)
+            
+            Spacer()
+            
             if !monitor.searchText.isEmpty {
                 Button {
                     monitor.searchText = ""
@@ -149,36 +208,54 @@ struct DrawerView: View {
                         .foregroundStyle(TechTheme.muted)
                 }
                 .buttonStyle(.plain)
+            } else {
+                Text("⌘F")
+                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                    .foregroundStyle(TechTheme.muted)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .techCard(cornerRadius: 14)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(TechTheme.palette(for: settings.visualTheme).background)
+                .shadow(color: TechTheme.line.opacity(0.5), radius: 4, y: 2)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(TechTheme.line, lineWidth: 1))
     }
 
     private var filterBar: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 0) {
             ForEach(ClipFilter.allCases) { filter in
                 Button {
                     monitor.filter = filter
                 } label: {
-                    Text(filter.displayName.uppercased())
-                        .font(TechTheme.labelFont)
-                        .tracking(0.5)
-                        .foregroundStyle(monitor.filter == filter ? TechTheme.onAccent : TechTheme.muted)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 9)
-                        .background {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(monitor.filter == filter ? TechTheme.cyan : Color.clear)
-                                .shadow(color: monitor.filter == filter ? TechTheme.cyan.opacity(0.32) : .clear, radius: 10)
+                    HStack(spacing: 6) {
+                        if filter == .media && monitor.filter == filter {
+                            Image(systemName: "photo.artframe")
+                                .font(.system(size: 12, weight: .semibold))
                         }
+                        Text(filter.displayName.uppercased())
+                            .font(.system(size: 12, weight: .bold))
+                    }
+                    .foregroundStyle(monitor.filter == filter ? TechTheme.green : TechTheme.muted)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background {
+                        if monitor.filter == filter {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(TechTheme.green.opacity(0.15))
+                        }
+                    }
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(4)
-        .techCard(cornerRadius: 14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(TechTheme.line, lineWidth: 1)
+        )
     }
 
     private var clipList: some View {
@@ -203,8 +280,8 @@ struct DrawerView: View {
                 }
                 .padding(8)
             }
-            .frame(minHeight: 170, idealHeight: 250)
-            .techCard(cornerRadius: 18)
+            .frame(minHeight: 200, idealHeight: 300)
+            .background(RoundedRectangle(cornerRadius: 12).stroke(TechTheme.line.opacity(0.5), lineWidth: 1))
             .onChange(of: selectedClipID) { _, id in
                 guard let id else { return }
                 withAnimation(.snappy(duration: 0.18)) {
@@ -215,26 +292,36 @@ struct DrawerView: View {
     }
 
     private var footer: some View {
-        HStack(spacing: 8) {
-            shortcutPill("↑↓", "select")
-            shortcutPill("↩", "paste")
-            shortcutPill("⌘1–9", "direct")
+        HStack(spacing: 6) {
+            shortcutPill("⌘N", "New")
+            shortcutPill("⌘R", "Scan")
+            shortcutPill("⌥T", "Text")
+            shortcutPill("⌘V", "Paste")
+            shortcutPill("⌘1–9", "1-9")
+            
             Spacer()
+            
             Button {
                 confirmingClearFilter = true
             } label: {
-                Label("Clear \(monitor.filter.displayName)", systemImage: "trash")
-                    .labelStyle(.titleAndIcon)
+                HStack(spacing: 4) {
+                    Image(systemName: "trash")
+                    Text("Clear All")
+                }
             }
-            .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(TechTheme.amber)
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(TechTheme.green)
             .buttonStyle(.plain)
-            .disabled(monitor.clips.isEmpty)
-            .opacity(monitor.clips.isEmpty ? 0.45 : 1)
-            Text("LOCAL")
-                .font(TechTheme.monoFont)
-                .foregroundStyle(TechTheme.green.opacity(0.9))
+            .padding(.horizontal, 2)
+            
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark.shield")
+                Text("Local")
+            }
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(TechTheme.green)
         }
+        .padding(.top, 4)
     }
 
     private var clearFilterMessage: String {
@@ -245,21 +332,44 @@ struct DrawerView: View {
     }
 
     private func shortcutPill(_ key: String, _ label: String) -> some View {
-        HStack(spacing: 5) {
+        VStack(spacing: 1) {
             Text(key)
-                .font(.system(.caption, design: .monospaced).weight(.bold))
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
                 .foregroundStyle(TechTheme.text)
-            Text(label.uppercased())
-                .font(.system(size: 9, weight: .semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
                 .foregroundStyle(TechTheme.muted)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .techCard(cornerRadius: 999)
+        .frame(width: 42, height: 34)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(TechTheme.line, lineWidth: 1)
+        )
     }
 
     private var selectedClip: ClipItem? {
         monitor.clips.first { $0.id == selectedClipID }
+    }
+
+    private var scopedProResultTitle: String? {
+        guard proResultMatchesSelectedClip else { return nil }
+        return monitor.proResultTitle
+    }
+
+    private var scopedProResultText: String? {
+        guard proResultMatchesSelectedClip else { return nil }
+        return monitor.proResultText
+    }
+
+    private var proResultMatchesSelectedClip: Bool {
+        guard let resultClipID = monitor.proResultClipID else {
+            return selectedClipID != nil
+        }
+        return resultClipID == selectedClipID
     }
 
     private var selectedIndex: Int? {
@@ -277,6 +387,10 @@ struct DrawerView: View {
                 .keyboardShortcut(.upArrow, modifiers: .command)
             Button("Next with Command") { moveSelection(delta: 1) }
                 .keyboardShortcut(.downArrow, modifiers: .command)
+            Button("Previous Filter") { moveFilter(delta: -1) }
+                .keyboardShortcut(.leftArrow, modifiers: [])
+            Button("Next Filter") { moveFilter(delta: 1) }
+                .keyboardShortcut(.rightArrow, modifiers: [])
 
             if let selectedClip {
                 Button("Paste Selected") { onPaste(selectedClip) }
@@ -304,6 +418,19 @@ struct DrawerView: View {
         selectedClipID = monitor.clips[nextIndex].id
     }
 
+    private func moveFilter(delta: Int) {
+        let filters = ClipFilter.allCases
+        guard let currentIndex = filters.firstIndex(of: monitor.filter) else {
+            monitor.filter = .all
+            selectedClipID = monitor.clips.first?.id
+            return
+        }
+
+        let nextIndex = (currentIndex + delta + filters.count) % filters.count
+        monitor.filter = filters[nextIndex]
+        selectedClipID = monitor.clips.first?.id
+    }
+
     private func installKeyboardMonitorIfNeeded() {
         guard keyboardMonitor == nil else { return }
 
@@ -317,6 +444,12 @@ struct DrawerView: View {
                     return nil
                 case 125:
                     moveSelection(delta: 1)
+                    return nil
+                case 123:
+                    moveFilter(delta: -1)
+                    return nil
+                case 124:
+                    moveFilter(delta: 1)
                     return nil
                 case 36, 76:
                     if let selectedClip {
@@ -356,49 +489,71 @@ private struct ClipRow: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
-            Text(index <= 9 ? "\(index)" : "·")
-                .font(TechTheme.monoFont)
-                .foregroundStyle(isSelected ? TechTheme.cyan : TechTheme.muted)
-                .frame(width: 18)
-
+            HStack(spacing: 8) {
+                Text("\(index)")
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .foregroundStyle(TechTheme.muted)
+                    .lineLimit(1)
+                    .frame(width: 18, alignment: .trailing)
+                
+                Circle()
+                    .fill(isSelected ? TechTheme.green : Color.clear)
+                    .frame(width: 5, height: 5)
+            }
+            
             preview
-                .frame(width: 46, height: 46)
-                .background {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(TechTheme.elevated)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(TechTheme.line.opacity(0.8), lineWidth: 0.8)
-                        }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .frame(width: 46, height: 34)
+                .background(TechTheme.line.opacity(0.3))
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(TechTheme.line.opacity(0.8), lineWidth: 1))
 
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(clip.title)
-                    .font(.system(size: 13.5, weight: .semibold))
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(TechTheme.text)
                     .lineLimit(1)
-                HStack(spacing: 6) {
-                    typeTag
+                    .truncationMode(.middle)
+                
+                HStack(spacing: 4) {
+                    Text(clip.kindDisplayName.capitalized)
+                    Text("•")
                     if let sourceApp = clip.sourceApp {
                         Text(sourceApp)
+                        Text("•")
                     }
-                    Text(clip.createdAt, style: .time)
+                    Text("Metadata") // Mockup equivalent for resolution etc.
                 }
-                .font(.system(size: 10.5, weight: .medium))
+                .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(TechTheme.muted)
+                .lineLimit(1)
+                .truncationMode(.tail)
             }
+            .layoutPriority(1)
 
             Spacer(minLength: 0)
+            
+            Text(clip.createdAt, style: .time)
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundStyle(TechTheme.muted)
+                .lineLimit(1)
+                .frame(width: 42, alignment: .trailing)
+                
+            Image(systemName: "ellipsis")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(TechTheme.muted)
+                .frame(width: 18)
         }
-        .padding(10)
-        .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(isSelected ? TechTheme.cyan : Color.clear)
-                .frame(width: 3)
-                .padding(.vertical, 12)
-        }
-        .techCard(selected: isSelected, cornerRadius: 14)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(isSelected ? TechTheme.surface : Color.clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(isSelected ? TechTheme.line : Color.clear, lineWidth: 1)
+        )
+        .shadow(color: isSelected ? TechTheme.line.opacity(0.5) : .clear, radius: 4, y: 2)
     }
 
     @ViewBuilder
@@ -413,18 +568,9 @@ private struct ClipRow: View {
                 .scaledToFill()
         } else {
             Image(systemName: systemImage)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(isSelected ? TechTheme.cyan : TechTheme.muted)
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(TechTheme.green)
         }
-    }
-
-    private var typeTag: some View {
-        Text(clip.kindDisplayName.uppercased())
-            .font(.system(size: 9, weight: .bold, design: .monospaced))
-            .foregroundStyle(clip.type == .media ? TechTheme.green : TechTheme.cyan)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(TechTheme.elevated.opacity(0.8), in: Capsule())
     }
 
     private var systemImage: String {

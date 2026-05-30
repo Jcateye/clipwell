@@ -9,7 +9,7 @@ final class ClipboardDrawerApplication: NSObject, NSApplicationDelegate {
     private let vocabularyStore = VocabularyStore()
     private lazy var clipboardMonitor = ClipboardMonitorService(settings: settings, vocabularyStore: vocabularyStore)
     private lazy var vocabularyViewModel = VocabularyViewModel(store: vocabularyStore)
-    private lazy var vocabularyWindowController = VocabularyWindowController(viewModel: vocabularyViewModel)
+    private lazy var vocabularyWindowController = VocabularyWindowController(viewModel: vocabularyViewModel, settings: settings)
     private let conflictService = ShortcutConflictService()
     private var drawerController: DrawerWindowController?
     private var menuBarController: MenuBarController?
@@ -27,9 +27,16 @@ final class ClipboardDrawerApplication: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        drawerController = DrawerWindowController(monitor: clipboardMonitor, settings: settings) { [weak self] clip in
-            self?.clipboardMonitor.paste(clip)
-        }
+        drawerController = DrawerWindowController(
+            monitor: clipboardMonitor,
+            settings: settings,
+            onPaste: { [weak self] clip in
+                self?.clipboardMonitor.paste(clip)
+            },
+            onOpenSettings: { [weak self] in
+                self?.settingsWindowController?.show()
+            }
+        )
         menuBarController = MenuBarController(
             settings: settings,
             openDrawer: { [weak self] in self?.drawerController?.open() },
@@ -58,9 +65,6 @@ final class ClipboardDrawerApplication: NSObject, NSApplicationDelegate {
                 .toggleDrawer: { [weak self] in
                     self?.drawerController?.toggle()
                 },
-                .screenshotOCR: { [weak self] in
-                    Task { await self?.clipboardMonitor.runScreenshotOCR() }
-                }
             ]
         )
 

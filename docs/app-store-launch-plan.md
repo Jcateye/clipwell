@@ -42,7 +42,7 @@ Ship the first App Store version only when all of these are true:
 - Auto-paste behavior is either supported with clear permission messaging or disabled by default until Accessibility permission handling is polished.
 - App has a proper `.icns` app icon and App Store 1024 x 1024 marketing icon.
 - Privacy policy, support URL, screenshots, metadata, and review notes are complete.
-- A clean install, upgrade, pause/resume, clear history, search, preview, hotkey, and quit flow have been tested on at least macOS 14 and the current macOS release available to you.
+- A clean install, upgrade, pause/resume, clear history, search, preview, hotkey, translation, and quit flow have been tested on at least macOS 15 and the current macOS release available to you.
 
 ## Phase 1: Store Readiness Audit
 
@@ -50,7 +50,7 @@ Current state:
 
 - Swift Package executable named `ClipboardDrawer`.
 - Manual `.app` packaging script with ad-hoc signing.
-- `Info.plist` uses bundle ID `com.miomiaolabs.clipwell`, display name `Clipwell`, minimum macOS 14.0, and `LSUIElement=true`.
+- `Info.plist` uses bundle ID `com.miomiaolabs.clipwell`, display name `Clipwell`, minimum macOS 15.0, and `LSUIElement=true`.
 - No App Sandbox entitlements file is present.
 - No Xcode project, Archive scheme, asset catalog, or App Store signing setup is present.
 
