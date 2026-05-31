@@ -139,23 +139,13 @@ final class ClipboardMonitorService: ObservableObject {
             try proFeatureGate.require(.imageOCR)
             guard clip.type == .media,
                   clip.documentURL == nil,
-                  let imageData = payloadStore.read(path: clip.payloadPath) else {
+                  payloadStore.read(path: clip.payloadPath) != nil else {
                 bannerMessage = "Select an image clip to run OCR."
                 return
             }
 
-            let result = try await proActionEngine.run([
-                .imageOCR
-            ], context: ProActionContext(
-                trigger: .manual,
-                clipboardItem: clip,
-                inputText: clip.plainText,
-                inputImageData: imageData,
-                sourceAppName: clip.sourceApp,
-                userPrompt: nil
-            ))
-
-            handleProActionResult(result, title: "Text", emptyMessage: "No text found in image.", clipID: clip.id)
+            let result = try await runPipeline([.imageOCR], trigger: .manual, for: clip)
+            handlePipelineTextResult(result, title: "Text", emptyMessage: "No text found in image.", clipID: clip.id)
         } catch ProFeatureError.locked {
             bannerMessage = "Pro OCR is locked."
         } catch {
@@ -180,16 +170,7 @@ final class ClipboardMonitorService: ObservableObject {
                 return
             }
 
-            let result = try await proActionEngine.run([
-                .addToVocabulary
-            ], context: ProActionContext(
-                trigger: .manual,
-                clipboardItem: clip,
-                inputText: text,
-                inputImageData: nil,
-                sourceAppName: clip.sourceApp,
-                userPrompt: nil
-            ))
+            let result = try await runPipeline([.addToVocabulary], trigger: .manual, for: clip)
 
             let outcome = result.metadata["result"]
             if outcome == "duplicate" {
@@ -217,18 +198,8 @@ final class ClipboardMonitorService: ObservableObject {
                 return
             }
 
-            let result = try await proActionEngine.run([
-                .translateText
-            ], context: ProActionContext(
-                trigger: .manual,
-                clipboardItem: clip,
-                inputText: text,
-                inputImageData: nil,
-                sourceAppName: clip.sourceApp,
-                userPrompt: nil
-            ))
-
-            handleProActionResult(result, title: "Translation", emptyMessage: "No translated text returned.", clipID: clip.id)
+            let result = try await runPipeline([.translateText], trigger: .manual, for: clip)
+            handlePipelineTextResult(result, title: "Translation", emptyMessage: "No translated text returned.", clipID: clip.id)
         } catch ProFeatureError.locked {
             bannerMessage = "Pro AI Translate is locked."
         } catch {
@@ -267,18 +238,8 @@ final class ClipboardMonitorService: ObservableObject {
                 return
             }
 
-            let result = try await proActionEngine.run([
-                .rewriteText
-            ], context: ProActionContext(
-                trigger: .manual,
-                clipboardItem: clip,
-                inputText: text,
-                inputImageData: nil,
-                sourceAppName: clip.sourceApp,
-                userPrompt: nil
-            ))
-
-            handleProActionResult(result, title: "AI Rewrite ready", emptyMessage: "No rewritten text returned.", clipID: clip.id)
+            let result = try await runPipeline([.rewriteText], trigger: .manual, for: clip)
+            handlePipelineTextResult(result, title: "AI Rewrite ready", emptyMessage: "No rewritten text returned.", clipID: clip.id)
         } catch ProFeatureError.locked {
             bannerMessage = "Pro AI Rewrite is locked."
         } catch {
@@ -302,18 +263,8 @@ final class ClipboardMonitorService: ObservableObject {
                 return
             }
 
-            let result = try await proActionEngine.run([
-                .summarizeText
-            ], context: ProActionContext(
-                trigger: .manual,
-                clipboardItem: clip,
-                inputText: text,
-                inputImageData: nil,
-                sourceAppName: clip.sourceApp,
-                userPrompt: nil
-            ))
-
-            handleProActionResult(result, title: "AI Summary ready", emptyMessage: "No summary text returned.", clipID: clip.id)
+            let result = try await runPipeline([.summarizeText], trigger: .manual, for: clip)
+            handlePipelineTextResult(result, title: "AI Summary ready", emptyMessage: "No summary text returned.", clipID: clip.id)
         } catch ProFeatureError.locked {
             bannerMessage = "Pro AI Summary is locked."
         } catch {
@@ -472,15 +423,57 @@ final class ClipboardMonitorService: ObservableObject {
     }
 
     private func runAutomaticOCRIfNeeded(for clip: ClipItem) {
-        guard settings.autoOCRImagesEnabled,
-              settings.proEnabled,
-              clip.type == .media,
-              clip.documentURL == nil else {
+        guard settings.proEnabled,
+              settings.postCapturePipelineStages.contains(where: { $0.enabled }) else {
             return
         }
 
         Task { @MainActor in
-            await runImageOCR(for: clip)
+            await runPostCapturePipeline(for: clip)
+        }
+    }
+
+    private func runPostCapturePipeline(for clip: ClipItem) async {
+        guard proBusyState == nil else { return }
+        defer { proBusyState = nil }
+
+        do {
+            let plugins = enabledPostCapturePlugins(for: clip)
+            guard !plugins.isEmpty else { return }
+            proBusyState = plugins.contains(.imageOCR) ? .imageOCR : nil
+            if let proBusyState {
+                bannerMessage = proBusyState.statusText
+            }
+            for plugin in plugins {
+                try requireFeature(for: plugin)
+            }
+            let frontmostApp = NSWorkspace.shared.frontmostApplication
+            let context = ClipPipelineContext(
+                trigger: .postCapture,
+                originalClip: clip,
+                source: ClipPipelineSource(
+                    appName: clip.sourceApp,
+                    bundleIdentifier: frontmostApp?.bundleIdentifier,
+                    capturedAt: clip.createdAt
+                )
+            )
+            let resultContext = try await makePipelineRunner(for: plugins).run(context)
+            if let textArtifact = resultContext.artifacts.last(where: { artifact in
+                ["ocr.text", "translation.text", "rewrite.text", "summary.text"].contains(artifact.kind)
+            }), case .text(let text) = textArtifact.content {
+                handleProActionResult(
+                    ProActionResult(text: text, shouldSaveToHistory: true),
+                    title: textArtifact.title,
+                    emptyMessage: "No text returned.",
+                    clipID: clip.id
+                )
+            } else if resultContext.stageResults.contains(where: { $0.status == .succeeded }) {
+                bannerMessage = "Post-copy pipeline complete."
+            }
+        } catch ProFeatureError.locked {
+            bannerMessage = "A Pro pipeline plugin is locked."
+        } catch {
+            bannerMessage = "Post-copy pipeline failed: \(error.localizedDescription)"
         }
     }
 
@@ -593,6 +586,86 @@ final class ClipboardMonitorService: ObservableObject {
         }
 
         bannerMessage = nil
+    }
+
+    private func runPipeline(_ plugins: [BuiltInClipPlugin], trigger: ClipPipelineTrigger, for clip: ClipItem) async throws -> ClipPipelineContext {
+        for plugin in plugins {
+            try requireFeature(for: plugin)
+        }
+        let frontmostApp = NSWorkspace.shared.frontmostApplication
+        let context = ClipPipelineContext(
+            trigger: trigger,
+            originalClip: clip,
+            source: ClipPipelineSource(
+                appName: clip.sourceApp,
+                bundleIdentifier: frontmostApp?.bundleIdentifier,
+                capturedAt: clip.createdAt
+            )
+        )
+        return try await makePipelineRunner(for: plugins).run(context)
+    }
+
+    private func handlePipelineTextResult(_ context: ClipPipelineContext, title: String, emptyMessage: String, clipID: ClipItem.ID?) {
+        if case .text(let text) = context.current {
+            handleProActionResult(
+                ProActionResult(text: text, shouldSaveToHistory: false),
+                title: context.artifacts.last?.title ?? title,
+                emptyMessage: emptyMessage,
+                clipID: clipID
+            )
+            return
+        }
+
+        guard let textArtifact = context.artifacts.last(where: { artifact in
+            if case .text = artifact.content { return true }
+            return false
+        }), case .text(let text) = textArtifact.content else {
+            bannerMessage = emptyMessage
+            return
+        }
+
+        handleProActionResult(
+            ProActionResult(text: text, shouldSaveToHistory: false),
+            title: textArtifact.title,
+            emptyMessage: emptyMessage,
+            clipID: clipID
+        )
+    }
+
+    private func makePipelineRunner(for plugins: [BuiltInClipPlugin]) -> ClipPipelineRunner {
+        ClipPipelineRunner(plugins: plugins.map {
+            BuiltInProActionPipelinePlugin(builtInPlugin: $0, engine: proActionEngine, payloadStore: payloadStore)
+        })
+    }
+
+    private func enabledPostCapturePlugins(for clip: ClipItem) -> [BuiltInClipPlugin] {
+        settings.postCapturePipelineStages
+            .filter(\.enabled)
+            .sorted { lhs, rhs in
+                lhs.order == rhs.order ? lhs.id < rhs.id : lhs.order < rhs.order
+            }
+            .compactMap { stage in
+                guard stage.triggers.contains(.postCapture),
+                      let plugin = BuiltInClipPlugin.allCases.first(where: { $0.id == stage.pluginID }) else {
+                    return nil
+                }
+                return plugin
+            }
+    }
+
+    private func requireFeature(for plugin: BuiltInClipPlugin) throws {
+        switch plugin {
+        case .imageOCR:
+            try proFeatureGate.require(.imageOCR)
+        case .translateText:
+            try proFeatureGate.require(.aiTranslate)
+        case .rewriteText:
+            try proFeatureGate.require(.aiRewrite)
+        case .summarizeText:
+            try proFeatureGate.require(.aiSummarize)
+        case .addToVocabulary:
+            try proFeatureGate.require(.vocabulary)
+        }
     }
 
     private func saveScreenshotClip(imageData: Data, sourceAppName: String?) throws -> ClipItem.ID {

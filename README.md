@@ -57,6 +57,13 @@ The App Store launch plan and marketing website are included in:
 - `docs/app-store-launch-plan.md`
 - `marketing/clipwell/`
 
+## Plugin Pipeline
+
+Clipwell is evolving toward a local-first plugin pipeline where copied content can be processed by ordered plugins. The design and authoring contract are documented in:
+
+- `docs/plugin-pipeline-design.md`
+- `docs/plugin-authoring-v1.md`
+
 The planned bundle identifier is:
 
 ```text

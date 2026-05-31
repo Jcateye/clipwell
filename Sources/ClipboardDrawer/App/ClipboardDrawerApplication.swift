@@ -7,6 +7,7 @@ import Foundation
 final class ClipboardDrawerApplication: NSObject, NSApplicationDelegate {
     private let settings = SettingsStore()
     private let vocabularyStore = VocabularyStore()
+    private let pluginInstallStore = ClipPluginInstallStore()
     private lazy var clipboardMonitor = ClipboardMonitorService(settings: settings, vocabularyStore: vocabularyStore)
     private lazy var vocabularyViewModel = VocabularyViewModel(store: vocabularyStore)
     private lazy var vocabularyWindowController = VocabularyWindowController(viewModel: vocabularyViewModel, settings: settings)
@@ -55,6 +56,7 @@ final class ClipboardDrawerApplication: NSObject, NSApplicationDelegate {
                 self?.hotkeyManager?.updateShortcut(shortcut, for: action) ?? false
             },
             aiConnectionValidator: aiConnectionValidator,
+            pluginInstallStore: pluginInstallStore,
             openVocabulary: { [weak self] in
                 self?.vocabularyWindowController.show()
             }

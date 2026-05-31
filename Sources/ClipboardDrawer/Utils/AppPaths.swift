@@ -24,4 +24,16 @@ enum AppPaths {
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
     }
+
+    static var pluginsDirectory: URL {
+        let directory = appSupportDirectory.appendingPathComponent("Plugins", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }
+
+    static var pluginDataDirectory: URL {
+        let directory = appSupportDirectory.appendingPathComponent("PluginData", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }
 }

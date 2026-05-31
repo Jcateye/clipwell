@@ -109,4 +109,21 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(reloaded.proTranslationTarget, .japanese)
         XCTAssertEqual(reloaded.proTranslationTargetLanguage, "Japanese")
     }
+
+    func testPostCapturePipelineStagesPersistAndMove() {
+        let suiteName = "SettingsStoreTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+
+        let settings = SettingsStore(defaults: defaults)
+        var stages = settings.postCapturePipelineStages
+        stages[0].enabled = true
+        settings.postCapturePipelineStages = stages
+        settings.movePostCapturePipelineStage(id: stages[0].id, direction: 1)
+
+        let reloaded = SettingsStore(defaults: defaults)
+        let sorted = reloaded.postCapturePipelineStages.sorted { $0.order < $1.order }
+
+        XCTAssertEqual(sorted[1].pluginID, BuiltInClipPlugin.imageOCR.id)
+        XCTAssertTrue(sorted[1].enabled)
+    }
 }

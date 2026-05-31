@@ -3,123 +3,387 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Clipwell - Local Clipboard Manager for Mac</title>
-  <meta name="description" content="Clipwell is a private, local-first clipboard drawer for macOS. Search, preview, and paste recent clips without a cloud account.">
+  <title>Clipwell - Safe. Local. Always.</title>
+  <meta name="description" content="Clipwell is a fast, beautiful clipboard manager for macOS. Everything stays on your Mac.">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <!-- Navigation -->
   <header class="site-header">
-    <a class="brand" href="index.html" aria-label="Clipwell home">
-      <img src="assets/icon.svg" alt="" width="32" height="32">
-      <span>Clipwell</span>
-    </a>
-    <a class="button small" href="#download">Download for macOS</a>
+    <div class="nav-container">
+      <a class="brand" href="index.html" aria-label="Clipwell home">
+        <svg class="brand-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+        <span>CLIPWELL</span>
+      </a>
+      
+      <nav class="nav-links" aria-label="Primary navigation">
+        <a href="#features">Features</a>
+        <a href="#pro">Pro</a>
+        <a href="#security">Security</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#faq">FAQ</a>
+        <a href="#changelog">Changelog</a>
+      </nav>
+      
+      <div class="nav-actions">
+        <a class="btn btn-primary" href="#download">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm3.293 11.707l-3 3a.999.999 0 01-1.414 0l-3-3a.999.999 0 111.414-1.414L11 13.586V8a1 1 0 012 0v5.586l1.707-1.707a.999.999 0 111.414 1.414z"/></svg>
+          Download for macOS
+        </a>
+        <button class="btn btn-icon theme-toggle" aria-label="Toggle theme">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+      </div>
+    </div>
   </header>
 
   <main>
+    <!-- Hero Section -->
     <section class="hero">
-      <div class="hero-copy">
-        <p class="eyebrow">Private clipboard memory for Mac</p>
-        <h1>Your clipboard, kept close.</h1>
-        <p class="lede">Clipwell gives macOS a fast side drawer for recent clips. Search, preview, restore, and paste without sending clipboard history to a server.</p>
-        <div class="actions">
-          <a class="button primary" href="#download">Download for macOS</a>
-          <a class="button secondary" href="support.html">Contact support</a>
+      <div class="hero-left">
+        <div class="hero-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+          <span>Local first. Always.</span>
         </div>
-        <ul class="trust-list" aria-label="Privacy highlights">
-          <li>Local SQLite history</li>
-          <li>No account required</li>
-          <li>Pause, ignore apps, clear anytime</li>
-        </ul>
-      </div>
-
-      <div class="product-card" aria-label="Clipwell app preview">
-        <div class="drawer-top">
-          <div>
-            <strong>CLIPWELL</strong>
-            <small>500 clips · Local only · Private by design</small>
+        
+        <h1 class="hero-title">
+          Your clipboard.<br>
+          <span class="text-green">Safe. Local. Always.</span>
+        </h1>
+        
+        <p class="hero-subtitle">
+          Clipwell is a fast, beautiful clipboard manager for macOS. Everything stays on your Mac.
+        </p>
+        
+        <div class="hero-feature-tags">
+          <div class="feature-tag">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            <span>100% Local</span>
           </div>
-          <span class="live"><i></i> LIVE</span>
+          <div class="feature-tag">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+            <span>Private by design</span>
+          </div>
+          <div class="feature-tag">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+            <span>No tracking</span>
+          </div>
         </div>
-        <div class="search-line">Search clips <kbd>⌘F</kbd></div>
-        <div class="tabs">
-          <span class="active">All</span>
-          <span>Text</span>
-          <span>Media</span>
-          <span>Document</span>
+        
+        <div class="hero-cta-group">
+          <a class="btn btn-primary btn-lg" href="#download">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm3.293 11.707l-3 3a.999.999 0 01-1.414 0l-3-3a.999.999 0 111.414-1.414L11 13.586V8a1 1 0 012 0v5.586l1.707-1.707a.999.999 0 111.414 1.414z"/></svg>
+            Download for macOS
+          </a>
+          <a class="btn btn-secondary btn-lg" href="#workflow">
+            Learn more
+          </a>
         </div>
-        <div class="clip-list">
-          <article class="clip selected">
-            <span>1</span>
-            <div class="thumb image"></div>
+        <p class="sys-req">macOS 11+ • Apple Silicon & Intel</p>
+      </div>
+      
+      <div class="hero-right">
+        <!-- Mask wrapper to truncate the image gracefully -->
+        <div class="hero-image-wrapper">
+          <img src="assets/app-mockup.png" alt="Clipwell App Mockup" class="hero-image">
+        </div>
+      </div>
+    </section>
+
+    <!-- Bento Grid Features -->
+    <section id="features" class="bento-section">
+      <div class="bento-grid">
+        <!-- Card 1 -->
+        <div class="bento-card">
+          <div class="card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><path d="M8 11h6M11 8v6"/></svg>
+          </div>
+          <div class="card-text">
+            <h3>Search history</h3>
+            <p>Find anything instantly with powerful, real-time search.</p>
+          </div>
+          <div class="card-graphic ui-element">
+            <div class="ui-search">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <span>Search clips</span>
+              <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+            <div class="ui-doc-item">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              <div>
+                <strong>Clipwell release notes</strong>
+                <span>Document • 3.2 KB</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Card 2 -->
+        <div class="bento-card">
+          <div class="card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+          </div>
+          <div class="card-text">
+            <h3>Filter by type</h3>
+            <p>Browse by All, Text, Media, or Documents.</p>
+          </div>
+          <div class="card-graphic filter-tabs">
+            <span>ALL</span>
+            <span>TEXT</span>
+            <span class="active">MEDIA</span>
+            <span>DOCUMENT</span>
+          </div>
+        </div>
+        
+        <!-- Card 3 -->
+        <div class="bento-card">
+          <div class="card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </div>
+          <div class="card-text">
+            <h3>Rich previews</h3>
+            <p>See more at a glance with thumbnails and metadata.</p>
+          </div>
+          <div class="card-graphic preview-item">
+            <div class="mock-thumb"></div>
             <div>
               <strong>clipwell-hero.png</strong>
-              <small>Media · Safari · Metadata</small>
+              <span>Image • 1920 x 1080</span>
             </div>
-            <time>21:55</time>
-          </article>
-          <article class="clip">
-            <span>2</span>
-            <div class="thumb text"></div>
-            <div>
-              <strong>Launch checklist</strong>
-              <small>Text · Notes · Metadata</small>
-            </div>
-            <time>20:08</time>
-          </article>
-          <article class="clip">
-            <span>3</span>
-            <div class="thumb text"></div>
-            <div>
-              <strong>App Store notes</strong>
-              <small>Text · Obsidian · Metadata</small>
-            </div>
-            <time>19:40</time>
-          </article>
-        </div>
-        <div class="preview">
-          <div>
-            <strong>Preview</strong>
-            <span>Media</span>
           </div>
-          <button>Paste</button>
+        </div>
+        
+        <!-- Card 4 -->
+        <div class="bento-card">
+          <div class="card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><path d="M6 8h.01"/><path d="M10 8h.01"/><path d="M14 8h.01"/><path d="M18 8h.01"/><path d="M6 12h.01"/><path d="M10 12h.01"/><path d="M14 12h.01"/><path d="M18 12h.01"/><path d="M8 16h8"/></svg>
+          </div>
+          <div class="card-text">
+            <h3>Keyboard paste</h3>
+            <p>Paste the latest or select with ⌘ V. Super fast.</p>
+          </div>
+          <div class="card-graphic kbd-graphic">
+            <kbd>⌘</kbd>
+            <kbd>V</kbd>
+          </div>
+        </div>
+        
+        <!-- Card 5 -->
+        <div class="bento-card">
+          <div class="card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+          </div>
+          <div class="card-text">
+            <h3>Ignore apps</h3>
+            <p>Exclude apps you don't want Clipwell to watch.</p>
+          </div>
+          <div class="card-graphic ignore-apps">
+            <div class="app-row">
+              <div class="app-name"><span class="app-icon blue"></span> Xcode</div>
+              <div class="toggle on"></div>
+            </div>
+            <div class="app-row">
+              <div class="app-name"><span class="app-icon black"></span> Terminal</div>
+              <div class="toggle on"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Card 6 -->
+        <div class="bento-card">
+          <div class="card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="10" y1="15" x2="10" y2="9"/><line x1="14" y1="15" x2="14" y2="9"/></svg>
+          </div>
+          <div class="card-text">
+            <h3>Pause listening</h3>
+            <p>Pause clipboard history whenever you need.</p>
+          </div>
+          <div class="card-graphic pause-menu">
+            <div class="menu-item green">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+              Listening <span class="badge-on">On</span>
+            </div>
+            <div class="menu-item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              Pause for 30 mins
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="features" id="features" aria-label="Core features">
-      <article>
-        <span>01</span>
-        <h2>Find old clips fast</h2>
-        <p>Open the side drawer, search recent history, filter by type, and paste with the keyboard.</p>
-      </article>
-      <article>
-        <span>02</span>
-        <h2>Preview before paste</h2>
-        <p>Inspect text, images, files, rich text, and HTML before restoring them to the clipboard.</p>
-      </article>
-      <article>
-        <span>03</span>
-        <h2>Private by default</h2>
-        <p>History stays on your Mac. Monitoring can be paused, ignored apps configured, and history cleared.</p>
-      </article>
+    <!-- Local First Section -->
+    <section class="local-first-section">
+      <div class="local-container">
+        <!-- Graphic Left -->
+        <div class="local-graphic">
+          <div class="diagram">
+            <div class="sqlite-cylinder">
+              <div class="layer top">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+              </div>
+              <div class="layer middle"></div>
+              <div class="layer bottom"></div>
+              <span class="label">SQLite</span>
+            </div>
+            
+            <div class="connectors">
+              <div class="node"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> App Data</div>
+              <div class="node"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> History</div>
+              <div class="node"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Payload Files</div>
+              <div class="node"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg> Settings</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Text Right -->
+        <div class="local-text">
+          <div class="badge-tag">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+            Private by design
+          </div>
+          <h2>Local first. Always.</h2>
+          <p class="desc">Clipwell stores everything locally on your Mac.<br>No accounts. No default cloud. No tracking.</p>
+          
+          <div class="check-grid">
+            <div class="check-item">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--brand-green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <div class="info">
+                <strong>All data in SQLite</strong>
+                <span>History and settings stored in a local SQLite database.</span>
+              </div>
+            </div>
+            
+            <div class="check-item">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--brand-green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <div class="info">
+                <strong>Local payload files</strong>
+                <span>Clips are saved on your disk for fast, reliable previews and search.</span>
+              </div>
+            </div>
+            
+            <div class="check-item">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--brand-green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <div class="info">
+                <strong>No cloud by default</strong>
+                <span>Your data never leaves your Mac unless you choose to export it.</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bottom-lock-tag">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            You're in control of <strong>your data. Always.</strong>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <section class="download" id="download">
-      <div>
-        <p class="eyebrow">Mac App Store preparation</p>
-        <h2>Simple clipboard history, no cloud account.</h2>
-        <p>Clipwell is being prepared for macOS release by MioMiao Labs.</p>
+    <!-- Pro Section -->
+    <section class="pro-section">
+      <div class="pro-container">
+        <div class="pro-left">
+          <div class="pro-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg> Pro</div>
+          <h2>More power.<br>Still private.</h2>
+          <p>Unlock advanced tools that run locally on your Mac.</p>
+          <a class="btn btn-primary" href="#pro">Explore Pro</a>
+        </div>
+        
+        <div class="pro-right-grid">
+          <div class="pro-card">
+            <div class="icon-circle">OCR</div>
+            <h3>OCR</h3>
+            <p>Extract text from images instantly with local OCR.</p>
+            <div class="demo-box">Total <span class="val">329.00</span></div>
+          </div>
+          
+          <div class="pro-card">
+            <div class="icon-circle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 012-2h2"/><path d="M17 3h2a2 2 0 012 2v2"/><path d="M21 17v2a2 2 0 01-2 2h-2"/><path d="M7 21H5a2 2 0 01-2-2v-2"/></svg></div>
+            <h3>Screenshot OCR</h3>
+            <p>Capture any part of your screen and extract text.</p>
+            <div class="demo-box dashed">Clipwell<br>Local. Always.</div>
+          </div>
+          
+          <div class="pro-card">
+            <div class="icon-circle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+            <h3>Translation</h3>
+            <p>Translate selected text with local and online engines.</p>
+            <div class="demo-row"><span class="box">Hello</span> → <span class="box">Hello</span></div>
+          </div>
+          
+          <div class="pro-card">
+            <div class="icon-circle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></div>
+            <h3>Local glossary</h3>
+            <p>Create and manage your own local glossary.</p>
+            <div class="demo-dict">
+              <strong>Clipwell</strong>
+              <span>A local-first clipboard app.</span>
+            </div>
+          </div>
+        </div>
       </div>
-      <a class="button primary" href="support.html">Get notified</a>
+    </section>
+
+    <!-- Workflow Timeline -->
+    <section class="workflow-section">
+      <h2 class="text-center">How Clipwell works</h2>
+      <div class="timeline">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="icon-sq"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></div>
+          <div class="info">
+            <strong>Copy</strong>
+            <span>Copy anything on your Mac. Clipwell captures it instantly.</span>
+          </div>
+        </div>
+        <div class="line"></div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="icon-sq"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+          <div class="info">
+            <strong>Store locally</strong>
+            <span>Clips are saved to your local SQLite database and disk.</span>
+          </div>
+        </div>
+        <div class="line"></div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="icon-sq"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+          <div class="info">
+            <strong>Search & preview</strong>
+            <span>Find what you need with search and rich previews.</span>
+          </div>
+        </div>
+        <div class="line"></div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="icon-sq"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg></div>
+          <div class="info">
+            <strong>Paste</strong>
+            <span>Paste with ⌘ V or one tap. Fast, seamless, private.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom CTA -->
+    <section class="bottom-cta">
+      <h2>Ready for a better<br>clipboard experience?</h2>
+      <p>Clipwell is local, fast, and built for macOS.<br>Download now and take control of your clipboard.</p>
+      <a class="btn btn-primary btn-lg mt" href="#download">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm3.293 11.707l-3 3a.999.999 0 01-1.414 0l-3-3a.999.999 0 111.414-1.414L11 13.586V8a1 1 0 012 0v5.586l1.707-1.707a.999.999 0 111.414 1.414z"/></svg>
+        Download for macOS
+      </a>
+      <p class="req">macOS 11+ • Apple Silicon & Intel</p>
+      <div class="sec-text"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Private by design. Local by default.</div>
     </section>
   </main>
-
-  <footer>
-    <span>Clipwell</span>
-    <a href="privacy.html">Privacy</a>
-    <a href="support.html">Support</a>
-  </footer>
 </body>
 </html>

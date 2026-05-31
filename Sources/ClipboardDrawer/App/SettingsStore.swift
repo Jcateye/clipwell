@@ -102,6 +102,9 @@ final class SettingsStore: ObservableObject {
         }
     }
     @Published var proOCRLanguagesText: String { didSet { defaults.set(proOCRLanguagesText, forKey: Keys.proOCRLanguagesText) } }
+    @Published var postCapturePipelineStages: [ClipPipelineStageConfiguration] {
+        didSet { persistPostCapturePipelineStages() }
+    }
 
     private let defaults: UserDefaults
 
@@ -166,6 +169,11 @@ final class SettingsStore: ObservableObject {
         proTranslationTarget = translationTarget
         proTranslationTargetLanguage = translationTarget.displayName
         proOCRLanguagesText = defaults.string(forKey: Keys.proOCRLanguagesText) ?? "zh-Hans,en-US"
+        postCapturePipelineStages = Self.loadPostCapturePipelineStages(defaults: defaults)
+        if defaults.data(forKey: Keys.postCapturePipelineStages) == nil {
+            postCapturePipelineStages = Self.migratedDefaultPostCapturePipelineStages(autoOCREnabled: autoOCRImagesEnabled)
+            persistPostCapturePipelineStages()
+        }
     }
 
     func shortcutsByAction() -> [AppAction: AppShortcut] {
@@ -260,6 +268,52 @@ final class SettingsStore: ObservableObject {
             !proAIModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    func movePostCapturePipelineStage(id: String, direction: Int) {
+        var sorted = postCapturePipelineStages.sorted { lhs, rhs in
+            lhs.order == rhs.order ? lhs.id < rhs.id : lhs.order < rhs.order
+        }
+        guard let index = sorted.firstIndex(where: { $0.id == id }) else { return }
+        let targetIndex = min(max(index + direction, 0), sorted.count - 1)
+        guard targetIndex != index else { return }
+        sorted.swapAt(index, targetIndex)
+        for stageIndex in sorted.indices {
+            sorted[stageIndex].order = (stageIndex + 1) * 10
+        }
+        postCapturePipelineStages = sorted
+    }
+
+    func updatePostCapturePipelineStage(_ stage: ClipPipelineStageConfiguration) {
+        guard let index = postCapturePipelineStages.firstIndex(where: { $0.id == stage.id }) else { return }
+        postCapturePipelineStages[index] = stage
+    }
+
+    func resetPostCapturePipelineStages() {
+        postCapturePipelineStages = Self.migratedDefaultPostCapturePipelineStages(autoOCREnabled: autoOCRImagesEnabled)
+    }
+
+    private func persistPostCapturePipelineStages() {
+        if let data = try? JSONEncoder().encode(postCapturePipelineStages) {
+            defaults.set(data, forKey: Keys.postCapturePipelineStages)
+        }
+    }
+
+    private static func loadPostCapturePipelineStages(defaults: UserDefaults) -> [ClipPipelineStageConfiguration] {
+        guard let data = defaults.data(forKey: Keys.postCapturePipelineStages),
+              let stages = try? JSONDecoder().decode([ClipPipelineStageConfiguration].self, from: data),
+              !stages.isEmpty else {
+            return BuiltInClipPlugin.defaultPostCaptureStages
+        }
+        return stages
+    }
+
+    private static func migratedDefaultPostCapturePipelineStages(autoOCREnabled: Bool) -> [ClipPipelineStageConfiguration] {
+        var stages = BuiltInClipPlugin.defaultPostCaptureStages
+        if let index = stages.firstIndex(where: { $0.pluginID == BuiltInClipPlugin.imageOCR.id }) {
+            stages[index].enabled = autoOCREnabled
+        }
+        return stages
+    }
+
     private enum Keys {
         static let visualTheme = "visual_theme"
         static let drawerEdge = "drawer_edge"
@@ -290,5 +344,6 @@ final class SettingsStore: ObservableObject {
         static let proTranslationTarget = "pro_translation_target"
         static let proTranslationTargetLanguage = "pro_translation_target_language"
         static let proOCRLanguagesText = "pro_ocr_languages_text"
+        static let postCapturePipelineStages = "post_capture_pipeline_stages"
     }
 }

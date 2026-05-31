@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 
-enum ClipType: String, CaseIterable, Identifiable, Codable {
+enum ClipType: String, CaseIterable, Identifiable, Codable, Sendable {
     case text
     case rtf
     case html
@@ -21,7 +21,7 @@ enum ClipType: String, CaseIterable, Identifiable, Codable {
     }
 }
 
-enum ClipFilter: String, CaseIterable, Identifiable {
+enum ClipFilter: String, CaseIterable, Identifiable, Sendable {
     case all
     case text
     case media
@@ -39,12 +39,12 @@ enum ClipFilter: String, CaseIterable, Identifiable {
     }
 }
 
-enum ClipOrigin: String, Codable {
+enum ClipOrigin: String, Codable, Sendable {
     case original
     case proDerived
 }
 
-struct ClipItem: Identifiable, Hashable {
+struct ClipItem: Identifiable, Hashable, Sendable {
     let id: String
     let createdAt: Date
     let type: ClipType

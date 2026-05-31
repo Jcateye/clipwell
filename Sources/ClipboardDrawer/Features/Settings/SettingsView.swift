@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var settings: SettingsStore
     @ObservedObject var aiConnectionValidator: AIConnectionValidator
+    @ObservedObject var pluginInstallStore: ClipPluginInstallStore
     let conflictService: ShortcutConflictService
     let saveShortcut: @MainActor (AppAction, AppShortcut) -> Bool
     let openVocabulary: () -> Void
@@ -16,11 +17,12 @@ struct SettingsView: View {
     @State private var launchAtLoginMessage: String?
     @State private var pendingActionForWarning: AppAction?
 
-    init(settings: SettingsStore, conflictService: ShortcutConflictService, saveShortcut: @MainActor @escaping (AppAction, AppShortcut) -> Bool, aiConnectionValidator: AIConnectionValidator, openVocabulary: @escaping () -> Void) {
+    init(settings: SettingsStore, conflictService: ShortcutConflictService, saveShortcut: @MainActor @escaping (AppAction, AppShortcut) -> Bool, aiConnectionValidator: AIConnectionValidator, pluginInstallStore: ClipPluginInstallStore, openVocabulary: @escaping () -> Void) {
         self.settings = settings
         self.conflictService = conflictService
         self.saveShortcut = saveShortcut
         self.aiConnectionValidator = aiConnectionValidator
+        self.pluginInstallStore = pluginInstallStore
         self.openVocabulary = openVocabulary
         _pendingShortcut = State(initialValue: settings.toggleDrawerShortcut)
     }
@@ -103,6 +105,8 @@ struct SettingsView: View {
             drawerTab
         case .clipboard:
             clipboardTab
+        case .plugins:
+            pluginsTab
         }
     }
 
@@ -144,6 +148,148 @@ struct SettingsView: View {
         }
         .padding(16)
         .techCard(cornerRadius: 10)
+    }
+
+    private var pluginsTab: some View {
+        VStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    labelBlock("Post-copy pipeline", "Enabled stages run in order after a new clip is captured")
+                    Spacer()
+                    Button("Reset") {
+                        settings.resetPostCapturePipelineStages()
+                    }
+                    .buttonStyle(TechSecondaryButtonStyle())
+                }
+
+                ForEach(settings.postCapturePipelineStages.sorted { lhs, rhs in
+                    lhs.order == rhs.order ? lhs.id < rhs.id : lhs.order < rhs.order
+                }) { stage in
+                    pipelineStageRow(stage)
+                }
+            }
+
+            Divider()
+                .overlay(TechTheme.line)
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    labelBlock("Installed plugins", "Built-in processors and locally installed plugin packages")
+                    Spacer()
+                    Button("Install Plugin") {
+                        pluginInstallStore.chooseAndInstallPluginPackage()
+                    }
+                    .buttonStyle(TechSecondaryButtonStyle())
+                }
+
+                ForEach(pluginInstallStore.availableManifests) { manifest in
+                    pluginManifestRow(manifest)
+                }
+
+                if let statusMessage = pluginInstallStore.statusMessage {
+                    statusText(statusMessage, color: statusMessage.contains("failed") ? TechTheme.amber : TechTheme.green)
+                }
+            }
+        }
+        .padding(16)
+        .techCard(cornerRadius: 10)
+    }
+
+    private func pipelineStageRow(_ stage: ClipPipelineStageConfiguration) -> some View {
+        let manifest = pluginInstallStore.manifest(for: stage.pluginID)
+        return HStack(spacing: 12) {
+            Toggle("", isOn: Binding(
+                get: { stage.enabled },
+                set: { enabled in
+                    var updated = stage
+                    updated.enabled = enabled
+                    settings.updatePostCapturePipelineStage(updated)
+                }
+            ))
+            .toggleStyle(.switch)
+            .labelsHidden()
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text((manifest?.name ?? stage.pluginID).uppercased())
+                    .font(TechTheme.labelFont)
+                    .foregroundStyle(TechTheme.text)
+                Text(manifest?.description ?? "Plugin is not installed.")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(TechTheme.muted)
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
+            HStack(spacing: 6) {
+                Button {
+                    settings.movePostCapturePipelineStage(id: stage.id, direction: -1)
+                } label: {
+                    Image(systemName: "chevron.up")
+                }
+                .help("Move up")
+                Button {
+                    settings.movePostCapturePipelineStage(id: stage.id, direction: 1)
+                } label: {
+                    Image(systemName: "chevron.down")
+                }
+                .help("Move down")
+            }
+            .buttonStyle(TechSecondaryButtonStyle())
+        }
+        .padding(10)
+        .background(TechTheme.background.opacity(0.28), in: RoundedRectangle(cornerRadius: 7))
+        .overlay {
+            RoundedRectangle(cornerRadius: 7)
+                .stroke(TechTheme.line.opacity(0.5), lineWidth: 0.7)
+        }
+    }
+
+    private func pluginManifestRow(_ manifest: ClipPluginManifest) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: pluginSymbol(for: manifest))
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(TechTheme.cyan)
+                .frame(width: 28, height: 28)
+                .background(TechTheme.elevated, in: RoundedRectangle(cornerRadius: 6))
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(manifest.name.uppercased())
+                        .font(TechTheme.labelFont)
+                        .foregroundStyle(TechTheme.text)
+                    Text(manifest.version)
+                        .font(TechTheme.monoFont)
+                        .foregroundStyle(TechTheme.muted)
+                }
+                Text(manifest.description)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(TechTheme.muted)
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
+            Text(pluginEntrypointLabel(manifest.entrypoint))
+                .font(TechTheme.monoFont)
+                .foregroundStyle(TechTheme.green)
+        }
+        .padding(10)
+        .background(TechTheme.background.opacity(0.22), in: RoundedRectangle(cornerRadius: 7))
+    }
+
+    private func pluginSymbol(for manifest: ClipPluginManifest) -> String {
+        switch manifest.entrypoint {
+        case .builtin: "shippingbox"
+        case .wasm: "cube.transparent"
+        }
+    }
+
+    private func pluginEntrypointLabel(_ entrypoint: ClipPluginEntrypoint) -> String {
+        switch entrypoint {
+        case .builtin: "BUILT-IN"
+        case .wasm: "WASM"
+        }
     }
 
     private var drawerTab: some View {
@@ -524,6 +670,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case general
     case drawer
     case clipboard
+    case plugins
 
     var id: String { rawValue }
 
@@ -532,6 +679,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: "General"
         case .drawer: "Drawer"
         case .clipboard: "Clipboard"
+        case .plugins: "Plugins"
         }
     }
 
@@ -540,6 +688,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: "power"
         case .drawer: "sidebar.leading"
         case .clipboard: "doc.on.clipboard"
+        case .plugins: "puzzlepiece.extension"
         }
     }
 }
