@@ -8,8 +8,10 @@ final class DrawerWindowController {
     private let settings: SettingsStore
     private let onPaste: @MainActor (ClipItem) -> Void
     private let onOpenSettings: @MainActor () -> Void
+    private let selectionResetSignal = DrawerSelectionResetSignal()
     private var panel: DrawerPanel?
     private var mouseMonitor: Any?
+    private var appToRestoreAfterPaste: NSRunningApplication?
     private var cancellables: Set<AnyCancellable> = []
 
     init(monitor: ClipboardMonitorService, settings: SettingsStore, onPaste: @MainActor @escaping (ClipItem) -> Void, onOpenSettings: @MainActor @escaping () -> Void) {
@@ -32,6 +34,8 @@ final class DrawerWindowController {
 
     func open() {
         let panel = ensurePanel()
+        rememberAppToRestoreAfterPaste()
+        selectionResetSignal.generation += 1
         panel.alphaValue = 1
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate()
@@ -40,6 +44,10 @@ final class DrawerWindowController {
     }
 
     func close() {
+        close(completion: nil)
+    }
+
+    private func close(completion: (@MainActor () -> Void)?) {
         guard let panel else { return }
         removeOutsideClickMonitor()
         let hiddenFrame = frame(hidden: true)
@@ -49,6 +57,7 @@ final class DrawerWindowController {
         } completionHandler: {
             Task { @MainActor in
                 panel.orderOut(nil)
+                completion?()
             }
         }
     }
@@ -74,11 +83,12 @@ final class DrawerWindowController {
         panel.contentView = NSHostingView(rootView: DrawerView(
             monitor: monitor,
             settings: settings,
+            selectionResetSignal: selectionResetSignal,
             onPaste: { [weak self] clip in
                 guard let self else { return }
                 if settings.autoCloseDrawerEnabled {
-                    close()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + settings.drawerAnimationSpeed.duration + 0.04) { [weak self] in
+                    close { [weak self] in
+                        self?.restoreAppAfterPaste()
                         self?.onPaste(clip)
                     }
                 } else {
@@ -137,4 +147,22 @@ final class DrawerWindowController {
             self.mouseMonitor = nil
         }
     }
+
+    private func rememberAppToRestoreAfterPaste() {
+        let frontmostApplication = NSWorkspace.shared.frontmostApplication
+        guard frontmostApplication?.bundleIdentifier != Bundle.main.bundleIdentifier else {
+            return
+        }
+        appToRestoreAfterPaste = frontmostApplication
+    }
+
+    private func restoreAppAfterPaste() {
+        appToRestoreAfterPaste?.activate(options: [.activateAllWindows])
+        appToRestoreAfterPaste = nil
+    }
+}
+
+@MainActor
+final class DrawerSelectionResetSignal: ObservableObject {
+    @Published var generation = 0
 }

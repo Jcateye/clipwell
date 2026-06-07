@@ -3,6 +3,7 @@ import SwiftUI
 struct DrawerView: View {
     @ObservedObject var monitor: ClipboardMonitorService
     @ObservedObject var settings: SettingsStore
+    @ObservedObject var selectionResetSignal: DrawerSelectionResetSignal
     var onPaste: (ClipItem) -> Void
     var onOpenSettings: () -> Void
     @State private var selectedClipID: ClipItem.ID?
@@ -102,8 +103,11 @@ struct DrawerView: View {
             }
             selectedClipID = id
         }
+        .onChange(of: selectionResetSignal.generation) { _, _ in
+            resetSelectionToFirstClip()
+        }
         .onAppear {
-            selectedClipID = selectedClipID ?? monitor.clips.first?.id
+            resetSelectionToFirstClip()
             installKeyboardMonitorIfNeeded()
         }
         .onDisappear {
@@ -422,12 +426,16 @@ struct DrawerView: View {
         let filters = ClipFilter.allCases
         guard let currentIndex = filters.firstIndex(of: monitor.filter) else {
             monitor.filter = .all
-            selectedClipID = monitor.clips.first?.id
+            resetSelectionToFirstClip()
             return
         }
 
         let nextIndex = (currentIndex + delta + filters.count) % filters.count
         monitor.filter = filters[nextIndex]
+        resetSelectionToFirstClip()
+    }
+
+    private func resetSelectionToFirstClip() {
         selectedClipID = monitor.clips.first?.id
     }
 
@@ -514,15 +522,7 @@ private struct ClipRow: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                 
-                HStack(spacing: 4) {
-                    Text(clip.kindDisplayName.capitalized)
-                    Text("•")
-                    if let sourceApp = clip.sourceApp {
-                        Text(sourceApp)
-                        Text("•")
-                    }
-                    Text("Metadata") // Mockup equivalent for resolution etc.
-                }
+                Text(subtitle)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(TechTheme.muted)
                 .lineLimit(1)
@@ -554,6 +554,15 @@ private struct ClipRow: View {
                 .stroke(isSelected ? TechTheme.line : Color.clear, lineWidth: 1)
         )
         .shadow(color: isSelected ? TechTheme.line.opacity(0.5) : .clear, radius: 4, y: 2)
+    }
+
+    private var subtitle: String {
+        [clip.kindDisplayName.capitalized, clip.sourceApp]
+            .compactMap { value in
+                let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                return trimmed.isEmpty ? nil : trimmed
+            }
+            .joined(separator: " • ")
     }
 
     @ViewBuilder

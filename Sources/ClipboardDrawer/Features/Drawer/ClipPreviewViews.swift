@@ -235,14 +235,16 @@ struct ClipPreviewPane: View {
             }
         case .rtf:
             if let path = clip.payloadPath, let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
-               let attributedString = NSAttributedString(rtf: data, documentAttributes: nil) {
+               let attributedString = NSAttributedString(rtf: data, documentAttributes: nil),
+               !attributedString.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 RichTextPreview(attributedString: attributedString)
             } else {
                 textPreview(clip.plainText ?? "Rich text payload is unavailable.")
             }
         case .html:
             if let path = clip.payloadPath, let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
-               let attributedString = NSAttributedString(html: data, documentAttributes: nil) {
+               let attributedString = NSAttributedString(html: data, documentAttributes: nil),
+               !attributedString.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 RichTextPreview(attributedString: attributedString)
             } else {
                 textPreview(clip.plainText ?? "HTML payload is unavailable.")
