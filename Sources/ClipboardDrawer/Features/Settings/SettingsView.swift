@@ -154,7 +154,7 @@ struct SettingsView: View {
         VStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    labelBlock("Post-copy pipeline", "Enabled stages run in order after a new clip is captured")
+                    labelBlock("Post-copy auto-run", "Only switched-on stages run automatically after a new clip is captured")
                     Spacer()
                     Button("Reset") {
                         settings.resetPostCapturePipelineStages()
@@ -162,10 +162,18 @@ struct SettingsView: View {
                     .buttonStyle(TechSecondaryButtonStyle())
                 }
 
-                ForEach(settings.postCapturePipelineStages.sorted { lhs, rhs in
+                let visibleStages = settings.postCapturePipelineStages.filter {
+                    settings.isPluginEnabled($0.pluginID)
+                }.sorted { lhs, rhs in
                     lhs.order == rhs.order ? lhs.id < rhs.id : lhs.order < rhs.order
-                }) { stage in
-                    pipelineStageRow(stage)
+                }
+
+                if visibleStages.isEmpty {
+                    statusText("Enable plugins in the library below to configure auto-run stages.", color: TechTheme.muted)
+                } else {
+                    ForEach(visibleStages) { stage in
+                        pipelineStageRow(stage)
+                    }
                 }
             }
 
@@ -174,7 +182,7 @@ struct SettingsView: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    labelBlock("Installed plugins", "Built-in processors and locally installed plugin packages")
+                    labelBlock("Plugin library", "Installed plugins available for manual buttons and auto-run pipelines")
                     Spacer()
                     Button("Install Plugin") {
                         pluginInstallStore.chooseAndInstallPluginPackage()
@@ -213,13 +221,18 @@ struct SettingsView: View {
                 Text((manifest?.name ?? stage.pluginID).uppercased())
                     .font(TechTheme.labelFont)
                     .foregroundStyle(TechTheme.text)
-                Text(manifest?.description ?? "Plugin is not installed.")
+                Text(stage.enabled ? "Auto-runs after copy when content matches." : "Available, but not running automatically after copy.")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(TechTheme.muted)
                     .lineLimit(2)
             }
 
             Spacer()
+
+            Text(stage.enabled ? "AUTO" : "OFF")
+                .font(TechTheme.monoFont)
+                .foregroundStyle(stage.enabled ? TechTheme.green : TechTheme.muted)
+                .frame(width: 34, alignment: .trailing)
 
             HStack(spacing: 6) {
                 Button {
@@ -247,9 +260,18 @@ struct SettingsView: View {
 
     private func pluginManifestRow(_ manifest: ClipPluginManifest) -> some View {
         HStack(spacing: 12) {
+            Toggle("", isOn: Binding(
+                get: { settings.isPluginEnabled(manifest.id) },
+                set: { enabled in
+                    settings.setPluginEnabled(enabled, pluginID: manifest.id)
+                }
+            ))
+            .toggleStyle(.switch)
+            .labelsHidden()
+
             Image(systemName: pluginSymbol(for: manifest))
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(TechTheme.cyan)
+                .foregroundStyle(settings.isPluginEnabled(manifest.id) ? TechTheme.cyan : TechTheme.muted)
                 .frame(width: 28, height: 28)
                 .background(TechTheme.elevated, in: RoundedRectangle(cornerRadius: 6))
 
@@ -272,10 +294,11 @@ struct SettingsView: View {
 
             Text(pluginEntrypointLabel(manifest.entrypoint))
                 .font(TechTheme.monoFont)
-                .foregroundStyle(TechTheme.green)
+                .foregroundStyle(settings.isPluginEnabled(manifest.id) ? TechTheme.green : TechTheme.muted)
         }
         .padding(10)
         .background(TechTheme.background.opacity(0.22), in: RoundedRectangle(cornerRadius: 7))
+        .opacity(settings.isPluginEnabled(manifest.id) ? 1 : 0.58)
     }
 
     private func pluginSymbol(for manifest: ClipPluginManifest) -> String {

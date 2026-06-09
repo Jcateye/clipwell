@@ -102,6 +102,9 @@ final class SettingsStore: ObservableObject {
         }
     }
     @Published var proOCRLanguagesText: String { didSet { defaults.set(proOCRLanguagesText, forKey: Keys.proOCRLanguagesText) } }
+    @Published var enabledPluginIDs: Set<String> {
+        didSet { defaults.set(Array(enabledPluginIDs).sorted(), forKey: Keys.enabledPluginIDs) }
+    }
     @Published var postCapturePipelineStages: [ClipPipelineStageConfiguration] {
         didSet { persistPostCapturePipelineStages() }
     }
@@ -169,6 +172,7 @@ final class SettingsStore: ObservableObject {
         proTranslationTarget = translationTarget
         proTranslationTargetLanguage = translationTarget.displayName
         proOCRLanguagesText = defaults.string(forKey: Keys.proOCRLanguagesText) ?? "zh-Hans,en-US"
+        enabledPluginIDs = Self.loadEnabledPluginIDs(defaults: defaults)
         postCapturePipelineStages = Self.loadPostCapturePipelineStages(defaults: defaults)
         if defaults.data(forKey: Keys.postCapturePipelineStages) == nil {
             postCapturePipelineStages = Self.migratedDefaultPostCapturePipelineStages(autoOCREnabled: autoOCRImagesEnabled)
@@ -268,6 +272,18 @@ final class SettingsStore: ObservableObject {
             !proAIModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    func isPluginEnabled(_ pluginID: String) -> Bool {
+        enabledPluginIDs.contains(pluginID)
+    }
+
+    func setPluginEnabled(_ enabled: Bool, pluginID: String) {
+        if enabled {
+            enabledPluginIDs.insert(pluginID)
+        } else {
+            enabledPluginIDs.remove(pluginID)
+        }
+    }
+
     func movePostCapturePipelineStage(id: String, direction: Int) {
         var sorted = postCapturePipelineStages.sorted { lhs, rhs in
             lhs.order == rhs.order ? lhs.id < rhs.id : lhs.order < rhs.order
@@ -304,6 +320,13 @@ final class SettingsStore: ObservableObject {
             return BuiltInClipPlugin.defaultPostCaptureStages
         }
         return stages
+    }
+
+    private static func loadEnabledPluginIDs(defaults: UserDefaults) -> Set<String> {
+        guard let stored = defaults.stringArray(forKey: Keys.enabledPluginIDs) else {
+            return Set(BuiltInClipPlugin.manifests.map(\.id))
+        }
+        return Set(stored)
     }
 
     private static func migratedDefaultPostCapturePipelineStages(autoOCREnabled: Bool) -> [ClipPipelineStageConfiguration] {
@@ -344,6 +367,7 @@ final class SettingsStore: ObservableObject {
         static let proTranslationTarget = "pro_translation_target"
         static let proTranslationTargetLanguage = "pro_translation_target_language"
         static let proOCRLanguagesText = "pro_ocr_languages_text"
+        static let enabledPluginIDs = "enabled_plugin_ids"
         static let postCapturePipelineStages = "post_capture_pipeline_stages"
     }
 }

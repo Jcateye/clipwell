@@ -29,6 +29,8 @@ struct DrawerView: View {
                         proResultTitle: scopedProResultTitle,
                         proResultText: scopedProResultText,
                         proBusyState: monitor.proBusyState,
+                        imageOCREnabled: settings.isPluginEnabled(BuiltInClipPlugin.imageOCR.id),
+                        translationEnabled: settings.isPluginEnabled(BuiltInClipPlugin.translateText.id),
                         useConfiguredAITranslation: settings.proAIEnabled && settings.hasConfiguredAITranslation,
                         translationSourceLanguage: settings.proTranslationSourceLanguage,
                         translationTargetLanguage: settings.proTranslationTarget,

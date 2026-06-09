@@ -589,6 +589,9 @@ final class ClipboardMonitorService: ObservableObject {
     }
 
     private func runPipeline(_ plugins: [BuiltInClipPlugin], trigger: ClipPipelineTrigger, for clip: ClipItem) async throws -> ClipPipelineContext {
+        guard plugins.allSatisfy({ settings.isPluginEnabled($0.id) }) else {
+            throw ClipPipelineRuntimeError.pluginDisabled
+        }
         for plugin in plugins {
             try requireFeature(for: plugin)
         }
@@ -646,6 +649,7 @@ final class ClipboardMonitorService: ObservableObject {
             }
             .compactMap { stage in
                 guard stage.triggers.contains(.postCapture),
+                      settings.isPluginEnabled(stage.pluginID),
                       let plugin = BuiltInClipPlugin.allCases.first(where: { $0.id == stage.pluginID }) else {
                     return nil
                 }
@@ -787,6 +791,17 @@ final class ClipboardMonitorService: ObservableObject {
         } catch {
             AppLog.clipboard.error("Promoting pasted clip failed: \(error.localizedDescription)")
             bannerMessage = "Pasted, but failed to move item to top."
+        }
+    }
+}
+
+private enum ClipPipelineRuntimeError: LocalizedError {
+    case pluginDisabled
+
+    var errorDescription: String? {
+        switch self {
+        case .pluginDisabled:
+            return "This plugin is disabled in Settings."
         }
     }
 }

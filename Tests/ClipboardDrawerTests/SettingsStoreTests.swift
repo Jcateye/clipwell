@@ -126,4 +126,18 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(sorted[1].pluginID, BuiltInClipPlugin.imageOCR.id)
         XCTAssertTrue(sorted[1].enabled)
     }
+
+    func testPluginEnabledStatePersists() {
+        let suiteName = "SettingsStoreTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+
+        let settings = SettingsStore(defaults: defaults)
+        XCTAssertTrue(settings.isPluginEnabled(BuiltInClipPlugin.imageOCR.id))
+
+        settings.setPluginEnabled(false, pluginID: BuiltInClipPlugin.imageOCR.id)
+
+        let reloaded = SettingsStore(defaults: defaults)
+        XCTAssertFalse(reloaded.isPluginEnabled(BuiltInClipPlugin.imageOCR.id))
+        XCTAssertTrue(reloaded.isPluginEnabled(BuiltInClipPlugin.translateText.id))
+    }
 }

@@ -8,6 +8,8 @@ struct ClipPreviewPane: View {
     let proResultTitle: String?
     let proResultText: String?
     let proBusyState: ProBusyKind?
+    let imageOCREnabled: Bool
+    let translationEnabled: Bool
     let useConfiguredAITranslation: Bool
     let translationSourceLanguage: TranslationLanguage
     let translationTargetLanguage: TranslationLanguage
@@ -59,7 +61,7 @@ struct ClipPreviewPane: View {
                     }
                 } else if let clip {
                     HStack(spacing: 8) {
-                        if clip.type == .text || clip.type == .rtf || clip.type == .html {
+                        if translationEnabled && (clip.type == .text || clip.type == .rtf || clip.type == .html) {
                             Button {
                                 translate(clip)
                             } label: {
@@ -68,7 +70,7 @@ struct ClipPreviewPane: View {
                             .buttonStyle(TechSecondaryButtonStyle())
                             .disabled(isBusy)
                         }
-                        if canConvertImageToText(clip) {
+                        if imageOCREnabled && canConvertImageToText(clip) {
                             Button {
                                 onImageOCR(clip)
                             } label: {
@@ -426,7 +428,15 @@ struct RichTextPreview: NSViewRepresentable {
         guard let textView = nsView.documentView as? NSTextView else {
             return
         }
-        textView.textStorage?.setAttributedString(attributedString)
+        textView.textStorage?.setAttributedString(readableAttributedString)
+    }
+
+    private var readableAttributedString: NSAttributedString {
+        let copy = NSMutableAttributedString(attributedString: attributedString)
+        let fullRange = NSRange(location: 0, length: copy.length)
+        copy.addAttribute(.foregroundColor, value: NSColor.labelColor, range: fullRange)
+        copy.removeAttribute(.backgroundColor, range: fullRange)
+        return copy
     }
 }
 
