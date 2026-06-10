@@ -287,7 +287,7 @@
     </section>
 
     <!-- Pro Section -->
-    <section class="pro-section">
+    <section id="pro" class="pro-section">
       <div class="pro-container">
         <div class="pro-left">
           <div class="pro-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg> Pro</div>
@@ -332,7 +332,7 @@
     </section>
 
     <!-- Workflow Timeline -->
-    <section class="workflow-section">
+    <section id="workflow" class="workflow-section">
       <h2 class="text-center">How Clipwell works</h2>
       <div class="timeline">
         <div class="step">
@@ -373,8 +373,150 @@
       </div>
     </section>
 
+    <!-- Security Section -->
+    <section id="security" class="security-section">
+      <div class="section-heading">
+        <div class="badge-tag">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          Security
+        </div>
+        <h2>Designed for clipboard data that should stay yours.</h2>
+        <p>Clipwell keeps control visible, predictable, and close to the Mac you use every day.</p>
+      </div>
+      <div class="security-grid">
+        <div class="security-card primary">
+          <div class="security-topline">
+            <span class="status-dot"></span>
+            Local storage active
+          </div>
+          <h3>No Clipwell cloud account</h3>
+          <p>Clipboard history is stored in your local SQLite database with payload files on disk.</p>
+          <div class="storage-stack">
+            <div><strong>SQLite</strong><span>History index</span></div>
+            <div><strong>Payloads</strong><span>Images and files</span></div>
+            <div><strong>Settings</strong><span>Local preferences</span></div>
+          </div>
+        </div>
+        <div class="security-card">
+          <div class="card-icon small">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="10" y1="15" x2="10" y2="9"/><line x1="14" y1="15" x2="14" y2="9"/></svg>
+          </div>
+          <h3>Pause anytime</h3>
+          <p>Stop listening from the menu bar when you are handling private material.</p>
+        </div>
+        <div class="security-card">
+          <div class="card-icon small">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 010 12.72"/><path d="M5.64 6.64a9 9 0 000 12.72"/><path d="M8.46 9.46a5 5 0 000 7.08"/><path d="M15.54 9.46a5 5 0 010 7.08"/><circle cx="12" cy="13" r="1"/></svg>
+          </div>
+          <h3>Ignore apps</h3>
+          <p>Exclude password managers, terminals, browsers, or any app you do not want captured.</p>
+        </div>
+        <div class="security-card">
+          <div class="card-icon small">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+          </div>
+          <h3>No analytics planned</h3>
+          <p>The current App Store plan avoids third-party analytics and advertising SDKs.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="pricing-section">
+      <div class="section-heading">
+        <div class="badge-tag">Pricing</div>
+        <h2>Start simple. Upgrade only when you need power tools.</h2>
+      </div>
+      <div class="pricing-grid">
+        <div class="price-card">
+          <div class="plan-label">Free</div>
+          <h3>Everyday clipboard</h3>
+          <p class="price">$0</p>
+          <p class="plan-desc">Fast history, search, previews, filters, and local control.</p>
+          <ul>
+            <li>Local clipboard history</li>
+            <li>Search and type filters</li>
+            <li>Rich previews</li>
+            <li>Pause and ignore apps</li>
+          </ul>
+        </div>
+        <div class="price-card featured">
+          <div class="plan-label">Pro</div>
+          <h3>Advanced workflows</h3>
+          <div class="price-options">
+            <p class="price">$1<span>/mo</span></p>
+            <p class="price lifetime">$12<span>lifetime</span></p>
+          </div>
+          <p class="plan-desc">OCR, screenshot OCR, translation, and local glossary tools.</p>
+          <ul>
+            <li>Image OCR</li>
+            <li>Screenshot OCR</li>
+            <li>Translation actions</li>
+            <li>Local vocabulary manager</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="faq-section">
+      <div class="section-heading">
+        <div class="badge-tag">FAQ</div>
+        <h2>Questions before installing.</h2>
+      </div>
+      <div class="faq-list">
+        <details open>
+          <summary>Does Clipwell upload my clipboard history?</summary>
+          <p>No. Clipwell is designed to store clipboard history locally on your Mac.</p>
+        </details>
+        <details>
+          <summary>Can I stop Clipwell from watching certain apps?</summary>
+          <p>Yes. Use ignored apps for places where clipboard history should not be captured.</p>
+        </details>
+        <details>
+          <summary>How does translation work?</summary>
+          <p>Translation can use macOS Translation by default or an OpenAI-compatible endpoint when you configure one.</p>
+        </details>
+        <details>
+          <summary>What can Clipwell preview?</summary>
+          <p>Clipwell handles text, rich text, HTML, images, media, documents, and file URLs.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- Changelog Section -->
+    <section id="changelog" class="changelog-section">
+      <div class="section-heading">
+        <div class="badge-tag">Changelog</div>
+        <h2>Built toward a focused Mac launch.</h2>
+      </div>
+      <div class="release-list">
+        <div class="release-item">
+          <span>May 2026</span>
+          <div>
+            <strong>App Store launch prep</strong>
+            <p>Marketing site, privacy policy, support content, and launch documentation.</p>
+          </div>
+        </div>
+        <div class="release-item">
+          <span>Pro tools</span>
+          <div>
+            <strong>OCR, translation, and vocabulary</strong>
+            <p>Local-first Pro actions for extracting, translating, and saving useful text.</p>
+          </div>
+        </div>
+        <div class="release-item">
+          <span>Core app</span>
+          <div>
+            <strong>Drawer, search, previews</strong>
+            <p>Menu bar app with global shortcut support and SQLite-backed history.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Bottom CTA -->
-    <section class="bottom-cta">
+    <section id="download" class="bottom-cta">
       <h2>Ready for a better<br>clipboard experience?</h2>
       <p>Clipwell is local, fast, and built for macOS.<br>Download now and take control of your clipboard.</p>
       <a class="btn btn-primary btn-lg mt" href="#download">
