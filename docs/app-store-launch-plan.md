@@ -6,8 +6,8 @@ Recommended product name: **Clipwell**
 
 Company / seller identity:
 
-- English: **MioMiao Labs LLC**
-- Chinese legal name: **深圳弥傲科技有限公司**
+- English: **Mio Miao Labs LLC.**
+- Chinese legal name: **深圳市弥傲科技有限责任公司**
 
 Positioning: a private, local-first clipboard drawer for Mac users who copy text, rich content, images, and files all day, but do not want another cloud sync surface.
 
@@ -109,7 +109,7 @@ Create the app record:
 - Primary language: English
 - Bundle ID: `com.miomiaolabs.clipwell`
 - SKU: `clipwell-macos-001`
-- Seller / company: `MioMiao Labs LLC` / `深圳弥傲科技有限公司`
+- Seller / company: `Mio Miao Labs LLC.` / `深圳市弥傲科技有限责任公司`
 - Category: Productivity or Utilities. Recommendation: Productivity.
 - Age rating: likely 4+, assuming no web content or user sharing features.
 
@@ -190,9 +190,11 @@ Pages:
 
 Deployment options:
 
-- Fastest: Cloudflare Pages or Vercel pointed at `marketing/clipwell`.
-- Simple: GitHub Pages from a `gh-pages` branch.
-- Custom domain suggestion: `clipwell.app` if available, otherwise `getclipwell.com`.
+- Production: Cloudflare Pages project `clipwell-site`.
+- Primary URL: `https://clipwell.mioerlab.com/`.
+- Fallback URL: `https://clipwell-site.pages.dev/`.
+- DNS: `clipwell.mioerlab.com` CNAME to `clipwell-site.pages.dev`, proxied in Cloudflare.
+- Operations runbook: `docs/clipwell-website-operations.md`.
 
 ## Phase 7: Release Sequence
 

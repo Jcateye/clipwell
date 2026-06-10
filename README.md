@@ -1,6 +1,6 @@
 # Clipwell
 
-Clipwell is a local-first clipboard drawer for macOS by MioMiao Labs LLC.
+Clipwell is a local-first clipboard drawer for macOS by Mio Miao Labs LLC. / 深圳市弥傲科技有限责任公司.
 
 It runs as a menu bar app, keeps recent clipboard items on the Mac, and lets you open a side drawer to search, preview, and restore previous clips.
 
@@ -55,7 +55,15 @@ The current Swift Package executable target is still named `ClipboardDrawer`. Us
 The App Store launch plan and marketing website are included in:
 
 - `docs/app-store-launch-plan.md`
+- `docs/clipwell-website-operations.md`
 - `marketing/clipwell/`
+
+Production website:
+
+- Primary URL: `https://clipwell.mioerlab.com/`
+- Cloudflare Pages fallback: `https://clipwell-site.pages.dev/`
+- Privacy URL: `https://clipwell.mioerlab.com/privacy`
+- Support URL: `https://clipwell.mioerlab.com/support`
 
 ## Plugin Pipeline
 
