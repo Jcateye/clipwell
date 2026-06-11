@@ -49,10 +49,11 @@ Ship the first App Store version only when all of these are true:
 Current state:
 
 - Swift Package executable named `ClipboardDrawer`.
-- Manual `.app` packaging script with ad-hoc signing.
+- Manual `.app` packaging script with ad-hoc signing and downloadable zip output.
 - `Info.plist` uses bundle ID `com.miomiaolabs.clipwell`, display name `Clipwell`, minimum macOS 15.0, and `LSUIElement=true`.
 - No App Sandbox entitlements file is present.
 - No Xcode project, Archive scheme, asset catalog, or App Store signing setup is present.
+- App icon exports now exist as `Resources/Clipwell.icns` and `Resources/Clipwell-AppStore-1024.png`, generated from `marketing/clipwell/assets/icon.svg`.
 
 Required changes:
 
@@ -61,7 +62,7 @@ Required changes:
 3. Choose final bundle ID, preferably `com.miomiaolabs.clipwell`.
 4. Add App Sandbox entitlement. Apple states App Sandbox is required for Mac App Store distribution.
 5. Add hardened runtime/signing configuration through Xcode archive flow.
-6. Add app icon asset catalog and `.icns` generation flow.
+6. Add app icon asset catalog for the future Xcode project. The current SwiftPM packaging flow already generates `.icns`.
 7. Decide whether to preserve migration from `Application Support/ClipboardDrawer` to the sandbox container. For a new App Store launch with no external users, this can be skipped.
 
 ## Phase 2: App Behavior Hardening

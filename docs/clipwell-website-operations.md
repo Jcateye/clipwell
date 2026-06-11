@@ -40,12 +40,22 @@ Support URL: https://clipwell.mioerlab.com/support
 Deploy from the repository root:
 
 ```sh
+scripts/prepare_website_download.sh release
 npx --yes wrangler@4.98.0 pages deploy marketing/clipwell --project-name clipwell-site --commit-dirty=true
+```
+
+`scripts/prepare_website_download.sh release` builds `dist/Clipwell.dmg` and copies it to `marketing/clipwell/downloads/Clipwell-latest.dmg`.
+
+For public distribution outside the Mac App Store, use a Developer ID signed and notarized DMG. After storing notarytool credentials, notarize with:
+
+```sh
+NOTARYTOOL_PROFILE=clipwell-notary scripts/notarize_dmg.sh
 ```
 
 If the site is deployed from another working directory, pass the absolute path:
 
 ```sh
+/Users/haoqi/OnePersonCompany/cccv/scripts/prepare_website_download.sh release
 npx --yes wrangler@4.98.0 pages deploy /Users/haoqi/OnePersonCompany/cccv/marketing/clipwell --project-name clipwell-site --commit-dirty=true
 ```
 
@@ -57,6 +67,7 @@ After deploy, verify:
 curl -I -L https://clipwell.mioerlab.com/
 curl -I -L https://clipwell.mioerlab.com/privacy
 curl -I -L https://clipwell.mioerlab.com/support
+curl -I -L https://clipwell.mioerlab.com/downloads/Clipwell-latest.dmg
 ```
 
 Expected result: each endpoint returns `200`.

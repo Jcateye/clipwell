@@ -42,11 +42,32 @@ Run locally:
 swift run ClipboardDrawer
 ```
 
-Package a local `.app` bundle:
+Package a local `.app` bundle and zip:
 
 ```sh
 scripts/package_app.sh release
 ```
+
+This writes:
+
+- `.build/app/Clipwell.app`
+- `dist/Clipwell-macOS.zip`
+
+Package a DMG for website distribution:
+
+```sh
+scripts/package_dmg.sh release
+```
+
+This writes `dist/Clipwell.dmg`.
+
+Prepare the website download file before deploying the static site:
+
+```sh
+scripts/prepare_website_download.sh release
+```
+
+This writes `marketing/clipwell/downloads/Clipwell-latest.dmg`, which is the file used by the website download buttons. It also keeps `marketing/clipwell/downloads/Clipwell-latest.zip` as a backup artifact.
 
 The current Swift Package executable target is still named `ClipboardDrawer`. User-facing App Store branding is `Clipwell`.
 

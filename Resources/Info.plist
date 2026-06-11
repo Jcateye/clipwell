@@ -10,6 +10,8 @@
     <string>Clipwell</string>
     <key>CFBundleDisplayName</key>
     <string>Clipwell</string>
+    <key>CFBundleIconFile</key>
+    <string>Clipwell</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
