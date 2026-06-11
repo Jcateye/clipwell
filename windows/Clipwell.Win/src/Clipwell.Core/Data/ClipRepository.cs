@@ -161,7 +161,13 @@ public sealed class ClipRepository : IDisposable
         command.ExecuteNonQuery();
     }
 
-    public void Dispose() => _connection.Dispose();
+    public void Dispose()
+    {
+        _connection.Dispose();
+        // Release the SQLite file handle held by the connection pool; without this,
+        // deleting the database file right after Dispose fails on Windows.
+        SqliteConnection.ClearPool(new SqliteConnection(_connection.ConnectionString));
+    }
 
     private void Migrate()
     {
