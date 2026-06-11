@@ -50,6 +50,38 @@
                              ToolTip="Click and press the new key combination" />
                     <TextBlock Text="Click the box and press a combination like Ctrl+Shift+V."
                                Foreground="Gray" Margin="0,8,0,0" TextWrapping="Wrap" />
+                    <CheckBox Content="Auto-paste after restoring a clip" IsChecked="{Binding AutoPasteEnabled}" Margin="0,16,0,4" />
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="AI">
+                <StackPanel Margin="12">
+                    <CheckBox Content="Enable AI features (translate / summarize / rewrite)"
+                              IsChecked="{Binding ProAIEnabled}" Margin="0,4" />
+                    <TextBlock Text="OpenAI-compatible base URL" Margin="0,12,0,4" />
+                    <TextBox Text="{Binding ProAIBaseUrl}" />
+                    <TextBlock Text="API key" Margin="0,12,0,4" />
+                    <TextBox Text="{Binding ProAIApiKey}" />
+                    <TextBlock Text="Model" Margin="0,12,0,4" />
+                    <TextBox Text="{Binding ProAIModel}" Width="200" HorizontalAlignment="Left" />
+                    <TextBlock Text="Translation target language" Margin="0,12,0,4" />
+                    <TextBox Text="{Binding ProTranslationTargetLanguage}" Width="200" HorizontalAlignment="Left" />
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button Content="Test connection" Padding="12,4" Command="{Binding TestAIConnectionCommand}" />
+                        <TextBlock Text="{Binding AiConnectionStatus}" VerticalAlignment="Center" Margin="12,0,0,0"
+                                   TextWrapping="Wrap" MaxWidth="240" />
+                    </StackPanel>
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="Pro">
+                <StackPanel Margin="12">
+                    <CheckBox Content="Enable Pro features (OCR, vocabulary)" IsChecked="{Binding ProEnabled}" Margin="0,4" />
+                    <CheckBox Content="Auto-OCR copied images" IsChecked="{Binding AutoOcrImagesEnabled}" Margin="0,4" />
+                    <CheckBox Content="Vocabulary collection" IsChecked="{Binding ProVocabularyEnabled}" Margin="0,4" />
+                    <TextBlock Text="OCR languages (BCP-47 tags, comma separated)" Margin="0,12,0,4" />
+                    <TextBox Text="{Binding ProOcrLanguagesText}" Width="240" HorizontalAlignment="Left" />
+                    <TextBlock Text="Screenshot OCR hotkey: Alt+Shift+R" Foreground="Gray" Margin="0,16,0,0" />
                 </StackPanel>
             </TabItem>
         </TabControl>

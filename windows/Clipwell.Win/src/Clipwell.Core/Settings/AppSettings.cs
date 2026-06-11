@@ -16,6 +16,9 @@ public sealed record HotkeyDefinition(uint Modifiers, uint Key)
     /// <summary>Ctrl+Shift+V (VK 0x56) — Windows counterpart of the mac default Cmd+Shift+V.</summary>
     public static HotkeyDefinition DefaultToggleDrawer { get; } = new(ModControl | ModShift, 0x56);
 
+    /// <summary>Alt+Shift+R (VK 0x52) — Windows counterpart of the mac default Option+Shift+R.</summary>
+    public static HotkeyDefinition DefaultScreenshotOcr { get; } = new(ModAlt | ModShift, 0x52);
+
     [JsonIgnore]
     public string DisplayText
     {
@@ -60,4 +63,18 @@ public sealed class AppSettings
     public string DrawerEdge { get; set; } = "right";
     public double DrawerWidth { get; set; } = 420;
     public string Theme { get; set; } = "glassNight";
+
+    // Pro features (mac: pro_* settings keys)
+    public bool ProEnabled { get; set; } = true;
+    public bool ProAIEnabled { get; set; } = true;
+    public string ProAIBaseUrl { get; set; } = "http://127.0.0.1:4000/v1";
+    public string ProAIApiKey { get; set; } = "";
+    public string ProAIModel { get; set; } = "gpt-5.4-mini";
+    public string ProTranslationTargetLanguage { get; set; } = "Simplified Chinese";
+    public string ProOcrLanguagesText { get; set; } = "zh-Hans,en-US";
+    public bool AutoOcrImagesEnabled { get; set; }
+    public bool ProVocabularyEnabled { get; set; } = true;
+    public HotkeyDefinition ScreenshotOcrHotkey { get; set; } = HotkeyDefinition.DefaultScreenshotOcr;
+    public List<Pipeline.ClipPipelineStageConfiguration> PostCapturePipelineStages { get; set; } =
+        Pipeline.BuiltInPluginIds.DefaultPostCaptureStages();
 }

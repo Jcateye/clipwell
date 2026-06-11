@@ -19,6 +19,7 @@ public sealed class TrayService : IDisposable
         SettingsStore settings,
         Action toggleDrawer,
         Action openSettings,
+        Action openVocabulary,
         Action quit)
     {
         _pauseItem = new MenuItem
@@ -38,12 +39,16 @@ public sealed class TrayService : IDisposable
         var settingsItem = new MenuItem { Header = "Settings..." };
         settingsItem.Click += (_, _) => openSettings();
 
+        var vocabularyItem = new MenuItem { Header = "Vocabulary..." };
+        vocabularyItem.Click += (_, _) => openVocabulary();
+
         var quitItem = new MenuItem { Header = "Quit Clipwell" };
         quitItem.Click += (_, _) => quit();
 
         var menu = new ContextMenu();
         menu.Items.Add(toggleItem);
         menu.Items.Add(_pauseItem);
+        menu.Items.Add(vocabularyItem);
         menu.Items.Add(settingsItem);
         menu.Items.Add(new Separator());
         menu.Items.Add(quitItem);

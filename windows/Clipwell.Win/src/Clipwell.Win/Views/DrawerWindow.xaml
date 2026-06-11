@@ -59,6 +59,9 @@
                  VerticalContentAlignment="Center"
                  Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
 
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Foreground="#CCFFB86C"
+                   FontSize="11" Margin="0,6,0,0" TextWrapping="Wrap" />
+
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
             <Button Content="All" Padding="10,4" Margin="0,0,6,0"
                     Command="{Binding SetFilterCommand}" CommandParameter="All" />
@@ -93,6 +96,22 @@
                                           CommandParameter="{Binding}" />
                                 <MenuItem Header="Delete"
                                           Command="{Binding PlacementTarget.Tag.DeleteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          CommandParameter="{Binding}" />
+                                <Separator />
+                                <MenuItem Header="Translate"
+                                          Command="{Binding PlacementTarget.Tag.TranslateCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          CommandParameter="{Binding}" />
+                                <MenuItem Header="Summarize"
+                                          Command="{Binding PlacementTarget.Tag.SummarizeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          CommandParameter="{Binding}" />
+                                <MenuItem Header="Rewrite"
+                                          Command="{Binding PlacementTarget.Tag.RewriteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          CommandParameter="{Binding}" />
+                                <MenuItem Header="OCR Image"
+                                          Command="{Binding PlacementTarget.Tag.RunOcrCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          CommandParameter="{Binding}" />
+                                <MenuItem Header="Add to Vocabulary"
+                                          Command="{Binding PlacementTarget.Tag.AddToVocabularyCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                           CommandParameter="{Binding}" />
                             </ContextMenu>
                         </Setter.Value>

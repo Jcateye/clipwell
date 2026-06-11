@@ -38,3 +38,32 @@ jobs:
         with:
           name: Clipwell-Windows
           path: windows/Clipwell.Win/publish
+
+  installer:
+    runs-on: windows-latest
+    needs: build
+    defaults:
+      run:
+        working-directory: windows/Clipwell.Win
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish self-contained
+        run: dotnet publish src/Clipwell.Win -c Release -r win-x64 --self-contained true -o publish-sc
+
+      - name: Build installer
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" `
+            /DPublishDir="$PWD\publish-sc" `
+            /DAppVersion="1.0.0" `
+            installer\clipwell.iss
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Clipwell-Setup
+          path: windows/Clipwell.Win/installer/output/*.exe

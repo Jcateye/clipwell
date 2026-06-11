@@ -1,0 +1,31 @@
+<Window x:Class="Clipwell.Win.Views.VocabularyWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Clipwell Vocabulary"
+        Width="420" Height="520"
+        WindowStartupLocation="CenterScreen">
+    <DockPanel Margin="12">
+        <TextBox DockPanel.Dock="Top" Height="28" Margin="0,0,0,8"
+                 VerticalContentAlignment="Center"
+                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+        <ListBox ItemsSource="{Binding Items}" HorizontalContentAlignment="Stretch">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <DockPanel Margin="4">
+                        <Button DockPanel.Dock="Right" Content="✕" Width="24" Height="24"
+                                Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                CommandParameter="{Binding}" />
+                        <StackPanel>
+                            <TextBlock Text="{Binding SourceText}" FontSize="14" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Foreground="Gray" FontSize="10">
+                                <Run Text="{Binding SourceApp, Mode=OneWay}" />
+                                <Run Text=" · " />
+                                <Run Text="{Binding CreatedAt, Mode=OneWay, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" />
+                            </TextBlock>
+                        </StackPanel>
+                    </DockPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</Window>

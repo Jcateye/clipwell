@@ -1,8 +1,10 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Clipwell.Core.Models;
 using Clipwell.Core.Settings;
+using Clipwell.Win.Interop;
 using Clipwell.Win.ViewModels;
 
 namespace Clipwell.Win.Views;
@@ -17,19 +19,35 @@ public partial class DrawerWindow : Window
     private readonly DrawerViewModel _viewModel;
     private readonly SettingsStore _settings;
 
+    /// <summary>Window that was focused before the drawer opened — the auto-paste target.</summary>
+    private IntPtr _previousForegroundWindow;
+
     public DrawerWindow(DrawerViewModel viewModel, SettingsStore settings)
     {
         InitializeComponent();
         _viewModel = viewModel;
         _settings = settings;
         DataContext = viewModel;
-        viewModel.ClipRestored += (_, _) =>
+        viewModel.ClipRestored += (_, _) => OnClipRestored();
+    }
+
+    private void OnClipRestored()
+    {
+        var autoPaste = _settings.Current.AutoPasteEnabled && _previousForegroundWindow != IntPtr.Zero;
+        if (_settings.Current.AutoCloseDrawerEnabled || autoPaste)
         {
-            if (_settings.Current.AutoCloseDrawerEnabled)
+            Hide();
+        }
+        if (autoPaste)
+        {
+            var target = _previousForegroundWindow;
+            // Give focus a beat to return to the target window before synthesizing Ctrl+V.
+            Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
             {
-                Hide();
-            }
-        };
+                NativeMethods.SetForegroundWindow(target);
+                Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, NativeMethods.SendCtrlV);
+            });
+        }
     }
 
     public void Toggle()
@@ -46,6 +64,7 @@ public partial class DrawerWindow : Window
 
     public void ShowDocked()
     {
+        _previousForegroundWindow = NativeMethods.GetForegroundWindow();
         var workArea = SystemParameters.WorkArea;
         Width = _settings.Current.DrawerWidth;
         Height = workArea.Height;

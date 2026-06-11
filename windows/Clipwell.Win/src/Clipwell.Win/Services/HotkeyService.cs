@@ -4,19 +4,21 @@ using Clipwell.Win.Interop;
 namespace Clipwell.Win.Services;
 
 /// <summary>
-/// Registers the global toggle-drawer hotkey against the hidden message window
-/// and re-registers whenever settings change. Registration failure (conflict with
-/// another app) is surfaced via RegistrationFailed for the settings UI.
+/// Registers the global hotkeys (toggle drawer, screenshot OCR) against the hidden
+/// message window and re-registers whenever settings change. Registration failure
+/// (conflict with another app) is surfaced via RegistrationFailed for the settings UI.
 /// </summary>
 public sealed class HotkeyService : IDisposable
 {
     private const int ToggleDrawerHotkeyId = 1;
+    private const int ScreenshotOcrHotkeyId = 2;
 
     private readonly MessageWindow _messageWindow;
     private readonly SettingsStore _settings;
-    private bool _registered;
+    private readonly HashSet<int> _registeredIds = [];
 
     public event EventHandler? ToggleDrawerRequested;
+    public event EventHandler? ScreenshotOcrRequested;
     public event EventHandler<HotkeyDefinition>? RegistrationFailed;
 
     public HotkeyService(MessageWindow messageWindow, SettingsStore settings)
@@ -26,9 +28,14 @@ public sealed class HotkeyService : IDisposable
 
         _messageWindow.HotkeyPressed += (_, id) =>
         {
-            if (id == ToggleDrawerHotkeyId)
+            switch (id)
             {
-                ToggleDrawerRequested?.Invoke(this, EventArgs.Empty);
+                case ToggleDrawerHotkeyId:
+                    ToggleDrawerRequested?.Invoke(this, EventArgs.Empty);
+                    break;
+                case ScreenshotOcrHotkeyId:
+                    ScreenshotOcrRequested?.Invoke(this, EventArgs.Empty);
+                    break;
             }
         };
         _settings.SettingsChanged += (_, _) => Register();
@@ -38,10 +45,20 @@ public sealed class HotkeyService : IDisposable
     public void Register()
     {
         Unregister();
-        var hotkey = _settings.Current.ToggleDrawerHotkey;
-        _registered = NativeMethods.RegisterHotKey(
-            _messageWindow.Handle, ToggleDrawerHotkeyId, hotkey.Modifiers, hotkey.Key);
-        if (!_registered)
+        RegisterOne(ToggleDrawerHotkeyId, _settings.Current.ToggleDrawerHotkey);
+        if (_settings.Current.ProEnabled)
+        {
+            RegisterOne(ScreenshotOcrHotkeyId, _settings.Current.ScreenshotOcrHotkey);
+        }
+    }
+
+    private void RegisterOne(int id, HotkeyDefinition hotkey)
+    {
+        if (NativeMethods.RegisterHotKey(_messageWindow.Handle, id, hotkey.Modifiers, hotkey.Key))
+        {
+            _registeredIds.Add(id);
+        }
+        else
         {
             RegistrationFailed?.Invoke(this, hotkey);
         }
@@ -49,11 +66,11 @@ public sealed class HotkeyService : IDisposable
 
     private void Unregister()
     {
-        if (_registered)
+        foreach (var id in _registeredIds)
         {
-            NativeMethods.UnregisterHotKey(_messageWindow.Handle, ToggleDrawerHotkeyId);
-            _registered = false;
+            NativeMethods.UnregisterHotKey(_messageWindow.Handle, id);
         }
+        _registeredIds.Clear();
     }
 
     public void Dispose() => Unregister();

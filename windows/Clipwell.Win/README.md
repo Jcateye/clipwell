@@ -4,18 +4,27 @@ Native Windows client for Clipwell, built with **.NET 8 + WPF**. It mirrors the 
 app's product design and data structures (same SQLite schema, payload file layout, and
 settings semantics) but is an independent codebase — the macOS Swift app stays untouched.
 
-## MVP scope
+## Features
 
 - System tray resident app (single instance)
 - Global hotkey (default `Ctrl+Shift+V`) toggles an edge-docked drawer
 - Clipboard monitoring via `AddClipboardFormatListener` (text, image, file drop, RTF, HTML)
 - SQLite history at `%APPDATA%\Clipwell\clips.sqlite` + binary payloads in `payloads\`
 - Search, type filter, restore to clipboard, pin, delete
+- Auto-paste after restore (optional; `SendInput` Ctrl+V into the previously focused window)
 - Settings (`%APPDATA%\Clipwell\settings.json`): history limit, launch at login, hotkey,
-  pause monitoring, ignored apps/extensions, drawer edge/width
+  pause monitoring, ignored apps/extensions, drawer edge/width, AI endpoint, OCR languages
 
-Out of scope for now (seam left via `IClipPostProcessor`): OCR, AI translate/summarize/rewrite,
-auto-paste, plugin pipeline.
+### Pro features (port of the macOS Pro set)
+
+- **Plugin pipeline** (`Clipwell.Core/Pipeline`): post-capture stages configurable in
+  settings; manual actions from the drawer context menu; derived results saved as
+  `proDerived` clips linked to the original
+- **Image OCR** via in-box `Windows.Media.Ocr` (auto-OCR of copied images optional)
+- **Screenshot OCR** (default `Alt+Shift+R`): drag a region, capture + OCR to a text clip
+- **AI translate / summarize / rewrite** against any OpenAI-compatible endpoint
+  (same system prompts as the macOS app)
+- **Vocabulary**: collected terms in `%APPDATA%\Clipwell\vocabulary.json`, window in tray menu
 
 ## Project layout
 
@@ -60,6 +69,12 @@ CI builds and tests on `windows-latest` for every push touching `windows/**`
 7. Toggle "Launch at login" — `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\Clipwell`
    appears/disappears.
 8. Pause monitoring from the tray menu — copies are no longer recorded.
+9. Copy an image with "Auto-OCR copied images" on — a derived text clip appears.
+10. Press `Alt+Shift+R`, drag a region — an image clip plus an OCR'd text clip appear.
+11. Configure an OpenAI-compatible endpoint in Settings > AI, "Test connection" reports OK,
+    then right-click a text clip > Translate — a derived translation clip appears.
+12. Right-click a short text clip > Add to Vocabulary — it shows in tray > Vocabulary.
+13. Enable auto-paste, restore a clip — it pastes into the previously focused app.
 
 Highest-risk areas that cannot be verified off-Windows: clipboard listener lifetime,
 hotkey conflicts, CF_HTML header parsing, and Deactivated behavior of the topmost drawer.
@@ -70,7 +85,13 @@ The `clips` table DDL, type/origin enum strings (`text|rtf|html|media|document`,
 `original|proDerived`), `payloads/{id}.{ext}` naming, and Unix-epoch REAL timestamps are
 identical to the macOS app, keeping future sync/import straightforward.
 
-## Packaging (later)
+## Packaging
 
-Planned route: Inno Setup over a `dotnet publish -r win-x64 --self-contained` output
-(MSIX as an alternative if Store distribution becomes interesting). Not scaffolded yet.
+`installer/clipwell.iss` (Inno Setup, preinstalled on GitHub windows runners). CI's
+`installer` job publishes a self-contained build and uploads `Clipwell-Setup-<version>.exe`
+as the `Clipwell-Setup` artifact. Local build on Windows:
+
+```powershell
+dotnet publish src/Clipwell.Win -c Release -r win-x64 --self-contained true -o publish-sc
+& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /DPublishDir="$PWD\publish-sc" installer\clipwell.iss
+```

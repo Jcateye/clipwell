@@ -23,4 +23,6 @@ public sealed class AppPaths
     public string PayloadsDirectory => Path.Combine(Root, "payloads");
 
     public string SettingsPath => Path.Combine(Root, "settings.json");
+
+    public string VocabularyPath => Path.Combine(Root, "vocabulary.json");
 }
