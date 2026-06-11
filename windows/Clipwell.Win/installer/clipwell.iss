@@ -28,8 +28,9 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 
 [Languages]
+; Simplified Chinese is not bundled with stock Inno Setup; add the unofficial
+; ChineseSimplified.isl to the repo later if a localized installer is wanted.
 Name: "english"; MessagesFile: "compiler:Default.isl"
-Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
 
 [Tasks]
 Name: "launchatlogin"; Description: "Start Clipwell when Windows starts"; GroupDescription: "Startup:"
