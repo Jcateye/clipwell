@@ -71,6 +71,13 @@ This writes `marketing/clipwell/downloads/Clipwell-latest.dmg`, which is the fil
 
 The current Swift Package executable target is still named `ClipboardDrawer`. User-facing App Store branding is `Clipwell`.
 
+## Windows version
+
+A native Windows client (.NET 8 + WPF) lives in `windows/Clipwell.Win/` and evolves
+independently of the macOS app while mirroring its data structures (same SQLite schema
+and payload layout). See `windows/Clipwell.Win/README.md` for build instructions; CI
+builds it on `windows-latest` via `.github/workflows/windows-build.yml`.
+
 ## App Store Preparation
 
 The App Store launch plan and marketing website are included in:

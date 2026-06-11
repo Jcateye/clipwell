@@ -1,0 +1,57 @@
+<Window x:Class="Clipwell.Win.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Clipwell Settings"
+        Width="480" Height="520"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize">
+    <DockPanel Margin="16">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <TextBlock Text="{Binding HotkeyStatusMessage}" Foreground="OrangeRed"
+                       VerticalAlignment="Center" Margin="0,0,12,0" />
+            <Button Content="Save" Padding="20,6" Command="{Binding SaveCommand}" Click="OnSaveClicked" />
+        </StackPanel>
+
+        <TabControl>
+            <TabItem Header="General">
+                <StackPanel Margin="12">
+                    <CheckBox Content="Launch at login" IsChecked="{Binding LaunchAtLoginEnabled}" Margin="0,4" />
+                    <CheckBox Content="Pause clipboard monitoring" IsChecked="{Binding MonitoringPaused}" Margin="0,4" />
+                    <CheckBox Content="Close drawer after restoring a clip" IsChecked="{Binding AutoCloseDrawerEnabled}" Margin="0,4" />
+                    <TextBlock Text="Drawer edge" Margin="0,12,0,4" />
+                    <ComboBox SelectedValuePath="Content" SelectedValue="{Binding DrawerEdge}" Width="120" HorizontalAlignment="Left">
+                        <ComboBoxItem Content="left" />
+                        <ComboBoxItem Content="right" />
+                    </ComboBox>
+                    <TextBlock Text="Drawer width" Margin="0,12,0,4" />
+                    <TextBox Text="{Binding DrawerWidth}" Width="120" HorizontalAlignment="Left" />
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="History">
+                <StackPanel Margin="12">
+                    <TextBlock Text="Maximum history items" Margin="0,4" />
+                    <TextBox Text="{Binding HistoryMaxCount}" Width="120" HorizontalAlignment="Left" />
+                    <CheckBox Content="Skip consecutive duplicates" IsChecked="{Binding DedupConsecutiveEnabled}" Margin="0,12,0,4" />
+                    <TextBlock Text="Ignored apps (one per line)" Margin="0,12,0,4" />
+                    <TextBox Text="{Binding IgnoredAppListText}" AcceptsReturn="True" Height="80"
+                             VerticalScrollBarVisibility="Auto" />
+                    <TextBlock Text="Ignored file extensions (comma separated)" Margin="0,12,0,4" />
+                    <TextBox Text="{Binding IgnoredFileExtensionsText}" />
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="Hotkey">
+                <StackPanel Margin="12">
+                    <TextBlock Text="Toggle drawer" Margin="0,4" />
+                    <TextBox x:Name="HotkeyBox" Text="{Binding HotkeyDisplayText, Mode=OneWay}" IsReadOnly="True"
+                             Width="200" HorizontalAlignment="Left"
+                             PreviewKeyDown="OnHotkeyBoxKeyDown"
+                             ToolTip="Click and press the new key combination" />
+                    <TextBlock Text="Click the box and press a combination like Ctrl+Shift+V."
+                               Foreground="Gray" Margin="0,8,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>

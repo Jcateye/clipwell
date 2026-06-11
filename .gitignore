@@ -6,6 +6,12 @@ DerivedData/
 .DS_Store
 dist/
 
+# .NET (windows/Clipwell.Win)
+windows/**/bin/
+windows/**/obj/
+windows/**/publish/
+*.user
+
 # Local agent/project working notes
 findings.md
 progress.md

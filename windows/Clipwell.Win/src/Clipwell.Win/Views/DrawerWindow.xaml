@@ -1,0 +1,104 @@
+<Window x:Class="Clipwell.Win.Views.DrawerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:Clipwell.Win.Views"
+        Title="Clipwell"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Topmost="True"
+        ShowActivated="True"
+        Background="#F2222230"
+        AllowsTransparency="True"
+        Deactivated="OnDeactivated"
+        PreviewKeyDown="OnPreviewKeyDown">
+    <Window.Resources>
+        <DataTemplate x:Key="TextClipTemplate">
+            <StackPanel Margin="10,8">
+                <TextBlock Text="{Binding Title}" Foreground="White" FontSize="13"
+                           TextTrimming="CharacterEllipsis" MaxHeight="60" TextWrapping="Wrap" />
+                <TextBlock Foreground="#88FFFFFF" FontSize="10" Margin="0,4,0,0">
+                    <Run Text="{Binding SourceApp, Mode=OneWay}" />
+                    <Run Text=" · " />
+                    <Run Text="{Binding CreatedAt, Mode=OneWay, StringFormat='{}{0:MM-dd HH:mm}'}" />
+                </TextBlock>
+            </StackPanel>
+        </DataTemplate>
+        <DataTemplate x:Key="ImageClipTemplate">
+            <StackPanel Margin="10,8">
+                <Image Source="{Binding PayloadPath}" MaxHeight="100" StretchDirection="DownOnly"
+                       HorizontalAlignment="Left" />
+                <TextBlock Foreground="#88FFFFFF" FontSize="10" Margin="0,4,0,0">
+                    <Run Text="{Binding SourceApp, Mode=OneWay}" />
+                    <Run Text=" · " />
+                    <Run Text="{Binding CreatedAt, Mode=OneWay, StringFormat='{}{0:MM-dd HH:mm}'}" />
+                </TextBlock>
+            </StackPanel>
+        </DataTemplate>
+        <DataTemplate x:Key="FileClipTemplate">
+            <StackPanel Margin="10,8">
+                <TextBlock Text="{Binding Title}" Foreground="White" FontSize="13" FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding PlainText}" Foreground="#AAFFFFFF" FontSize="10"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Foreground="#88FFFFFF" FontSize="10" Margin="0,4,0,0">
+                    <Run Text="{Binding SourceApp, Mode=OneWay}" />
+                    <Run Text=" · " />
+                    <Run Text="{Binding CreatedAt, Mode=OneWay, StringFormat='{}{0:MM-dd HH:mm}'}" />
+                </TextBlock>
+            </StackPanel>
+        </DataTemplate>
+        <views:ClipItemTemplateSelector x:Key="ClipTemplateSelector"
+                                        TextTemplate="{StaticResource TextClipTemplate}"
+                                        ImageTemplate="{StaticResource ImageClipTemplate}"
+                                        FileTemplate="{StaticResource FileClipTemplate}" />
+    </Window.Resources>
+
+    <DockPanel Margin="12">
+        <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Height="30" Margin="0,0,0,8"
+                 VerticalContentAlignment="Center"
+                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button Content="All" Padding="10,4" Margin="0,0,6,0"
+                    Command="{Binding SetFilterCommand}" CommandParameter="All" />
+            <Button Content="Text" Padding="10,4" Margin="0,0,6,0"
+                    Command="{Binding SetFilterCommand}" CommandParameter="Text" />
+            <Button Content="Media" Padding="10,4" Margin="0,0,6,0"
+                    Command="{Binding SetFilterCommand}" CommandParameter="Media" />
+            <Button Content="Document" Padding="10,4"
+                    Command="{Binding SetFilterCommand}" CommandParameter="Document" />
+        </StackPanel>
+
+        <ListBox ItemsSource="{Binding Clips}"
+                 ItemTemplateSelector="{StaticResource ClipTemplateSelector}"
+                 Background="Transparent" BorderThickness="0"
+                 HorizontalContentAlignment="Stretch"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 VirtualizingPanel.ScrollUnit="Pixel"
+                 MouseDoubleClick="OnItemDoubleClick">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <!-- Tag carries the DrawerViewModel into the ContextMenu, whose DataContext is the ClipItem. -->
+                    <Setter Property="Tag"
+                            Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}" />
+                    <Setter Property="ContextMenu">
+                        <Setter.Value>
+                            <ContextMenu>
+                                <MenuItem Header="Restore"
+                                          Command="{Binding PlacementTarget.Tag.RestoreCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          CommandParameter="{Binding}" />
+                                <MenuItem Header="Pin / Unpin"
+                                          Command="{Binding PlacementTarget.Tag.TogglePinCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          CommandParameter="{Binding}" />
+                                <MenuItem Header="Delete"
+                                          Command="{Binding PlacementTarget.Tag.DeleteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          CommandParameter="{Binding}" />
+                            </ContextMenu>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ListBox.ItemContainerStyle>
+        </ListBox>
+    </DockPanel>
+</Window>
