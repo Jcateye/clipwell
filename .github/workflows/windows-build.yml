@@ -1,6 +1,21 @@
 name: Windows Build
 
 on:
+  workflow_dispatch:
+    inputs:
+      store_identity_name:
+        description: Package/Identity/Name from Partner Center
+        required: true
+        type: string
+      store_publisher:
+        description: Package/Identity/Publisher from Partner Center
+        required: true
+        type: string
+      package_version:
+        description: Four-part MSIX version
+        required: true
+        default: 1.0.0.0
+        type: string
   push:
     branches: [main]
     paths:
@@ -67,3 +82,32 @@ jobs:
         with:
           name: Clipwell-Setup
           path: windows/Clipwell.Win/installer/output/*.exe
+
+  store-msix:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build and validate Store MSIX
+        shell: pwsh
+        env:
+          STORE_IDENTITY_NAME: ${{ inputs.store_identity_name }}
+          STORE_PUBLISHER: ${{ inputs.store_publisher }}
+          PACKAGE_VERSION: ${{ inputs.package_version }}
+        run: |
+          ./windows/Clipwell.Win/store/package-store.ps1 `
+            -IdentityName $env:STORE_IDENTITY_NAME `
+            -Publisher $env:STORE_PUBLISHER `
+            -Version $env:PACKAGE_VERSION
+
+      - name: Upload Store MSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: Clipwell-Store-MSIX-${{ inputs.package_version }}
+          path: dist/Clipwell-${{ inputs.package_version }}-win-x64.msix
+          if-no-files-found: error
